@@ -1,4 +1,5 @@
 import { WebPlugin } from '@capacitor/core';
+import { ipcRenderer } from 'electron';
 import { MsalPlugin } from '..';
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
@@ -10,7 +11,6 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 	}
 	
 	async echo(options: { value: string; }): Promise<{ value: string; }> {
-		console.log('ECHO', options);
-		return options;
+		return ipcRenderer.sendSync('echo', options.value);
 	}
 }
