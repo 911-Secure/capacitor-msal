@@ -1,9 +1,9 @@
 declare module "@capacitor/core" {
-  interface PluginRegistry {
-    Msal?: MsalPlugin;
-  }
+	interface PluginRegistry {
+		Msal?: MsalPlugin;
+	}
 }
 
 export interface MsalPlugin {
-  echo(options: { value: string }): Promise<{value: string}>;
+	echo(options: { value: string }): Promise<{ value: string }>;
 }
