@@ -2,8 +2,12 @@
   "name": "capacitor-msal",
   "version": "0.1.0",
   "description": "A Capacitor plugin that provides OAuth 2.0 authentication using the Microsoft Authentication Library",
+  "main": "dist/main.js",
+  "module": "dist/renderer.js",
   "scripts": {
-    "build": "npm run clean && tsc",
+    "build": "npm run clean && npm run build:main && npm run build:renderer",
+    "build:main": "tsc --project tsconfig.main.json",
+    "build:renderer": "tsc --project tsconfig.renderer.json",
     "clean": "rm -rf ./dist"
   },
   "author": "911 Secure",
@@ -12,6 +16,7 @@
     "@capacitor/core": "latest"
   },
   "devDependencies": {
+    "electron": "^5.0.1",
     "typescript": "^3.2.4"
   }
 }
