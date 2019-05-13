@@ -2,86 +2,56 @@
 
 This is an OAuth 2 client plugin for Capacitor. It uses the Microsoft Authentication Library (MSAL) to authenticate the user and acquire access tokens.
 
-## Getting Started
+## Installing
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
-
-### Prerequisites
-
-What things you need to install the software and how to install them
+Currently, this package is only hosted at GitHub.
 
 ```
-Give examples
+npm install github:911-Secure/capacitor-msal
 ```
 
-### Installing
+## Configuration
 
-A step by step series of examples that tell you how to get a development env running
+### Web
 
-Say what the step will be
+This plugin is not supported in a pure web application.
 
-```
-Give the example
-```
+### Electron
 
-And repeat
+Both the Electron implementation and the needed registration function are exported as ES Modules. The `esm` package is recommended to import these modules.
 
-```
-until finished
-```
+Create a script (e.g. `plugins.js`) with the following content.
+```js
+// Enable ECMAScript Modules.
+const load = require('esm')(module, {
+	mainFields: ['module']
+});
 
-End with an example of getting some data out of the system or using it for a little demo
+// Import the plugin and register function.
+const { registerElectronPlugin } = load('@capacitor/electron/dist/esm');
+const { Msal } = load('capacitor-msal/electron');
 
-## Running the tests
-
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
+// Register the plugin.
+registerElectronPlugin(Msal);
 ```
 
-### And coding style tests
-
-Explain what these tests test and why
-
+Add the newly created script to the main window as a preload script. For example,
+```js
+mainWindow = new BrowserWindow({
+	height: 920,
+	width: 1600,
+	show: false,
+	webPreferences: {
+		nodeIntegration: true,
+		preload: path.join(__dirname, 'plugins.js')
+	}
+});
 ```
-Give an example
-```
 
-## Deployment
+### Android
 
-Add additional notes about how to deploy this on a live system
+Coming soon&trade;
 
-## Built With
+### iOS
 
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
-
-## Contributing
-
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
-
-## Authors
-
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
-
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+Coming soon&trade;

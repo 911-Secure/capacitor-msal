@@ -5,5 +5,7 @@ declare module "@capacitor/core" {
 }
 
 export interface MsalPlugin {
-	echo(options: { value: string }): Promise<{ value: string }>;
+	readonly user: any;
+	login(): Promise<void>;
+	acquireToken(): Promise<{ token: string }>;
 }

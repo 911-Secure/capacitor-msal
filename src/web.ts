@@ -9,9 +9,16 @@ export class MsalWeb extends WebPlugin implements MsalPlugin {
 		});
 	}
 
-	async echo(options: { value: string }): Promise<{ value: string }> {
-		console.log('ECHO', options);
-		return options;
+	get user(): any {
+		throw new Error("Method not implemented.");
+	}
+
+	login(): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+
+	acquireToken(): Promise<{ token: string; }> {
+		throw new Error("Method not implemented.");
 	}
 }
 

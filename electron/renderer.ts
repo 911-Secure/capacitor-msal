@@ -1,5 +1,4 @@
 import { WebPlugin } from '@capacitor/core';
-import { ipcRenderer } from 'electron';
 import { MsalPlugin } from '..';
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
@@ -10,9 +9,16 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		});
 	}
 	
-	echo(options: { value: string; }): Promise<{ value: string; }> {
-		const value = ipcRenderer.sendSync('echo', options.value);
-		return Promise.resolve({ value });
+	get user(): any {
+		throw new Error('Method not implemented.');
+	}
+
+	login(): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+
+	acquireToken(): Promise<{ token: string; }> {
+		throw new Error("Method not implemented.");
 	}
 }
 
