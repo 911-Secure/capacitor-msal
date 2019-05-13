@@ -5,10 +5,12 @@
   "main": "dist/main.js",
   "module": "dist/renderer.js",
   "scripts": {
-    "build": "run-s clean build:*",
+    "prebuild": "npm run clean",
+    "build": "run-p build:*",
     "build:main": "tsc --project tsconfig.main.json",
     "build:renderer": "tsc --project tsconfig.renderer.json",
-    "clean": "rm -rf ./dist"
+    "clean": "rm -rf ./dist",
+    "prepare": "npm run build"
   },
   "author": "911 Secure",
   "license": "MIT",
