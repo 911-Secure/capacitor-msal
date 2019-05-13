@@ -14,3 +14,7 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		return ipcRenderer.sendSync('echo', options.value);
 	}
 }
+
+const Msal = new MsalElectron();
+
+export { Msal };
