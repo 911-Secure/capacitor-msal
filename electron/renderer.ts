@@ -10,8 +10,9 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		});
 	}
 	
-	async echo(options: { value: string; }): Promise<{ value: string; }> {
-		return ipcRenderer.sendSync('echo', options.value);
+	echo(options: { value: string; }): Promise<{ value: string; }> {
+		const value = ipcRenderer.sendSync('echo', options.value);
+		return Promise.resolve({ value });
 	}
 }
 
