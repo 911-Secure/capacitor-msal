@@ -94,3 +94,6 @@ typings/
 
 # DynamoDB Local files
 .dynamodb/
+
+# Capacitor plugin output
+dist
