@@ -11,7 +11,7 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 			platforms: ['electron']
 		});
 
-		ipcRenderer.on('capacitor-msal-user-logged-in', (event: Event, user: any) => {
+		ipcRenderer.on('capacitor-msal-user-logged-in', (_event: Event, user: any) => {
 			this._user = user;
 			this.notifyListeners('userLoggedIn', user);
 		});

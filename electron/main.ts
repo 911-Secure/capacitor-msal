@@ -40,7 +40,7 @@ export class CapacitorMsal {
 
 		// Register the scheme used by the Redirect URI.
 		const scheme = new URL(this.options.redirectUri).protocol;
-		protocol.registerHttpProtocol(scheme, async (request, callback) => {
+		protocol.registerHttpProtocol(scheme, async request => {
 			const params = this.client.callbackParams(request.url);
 			this.tokens = await this.client.callback(this.options.redirectUri, params, {
 				response_type: 'code',
