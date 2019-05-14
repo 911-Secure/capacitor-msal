@@ -1,5 +1,12 @@
+import fs from 'fs';
 import { ipcMain, protocol, shell, BrowserWindow } from 'electron';
 import { Issuer, Client, generators, TokenSet } from 'openid-client';
+
+interface MsalOptions {
+	tenant: string;
+	redirectUri: string;
+	clientId: string;
+}
 
 export class CapacitorMsal {
 	private client: Client;
@@ -7,28 +14,35 @@ export class CapacitorMsal {
 	private state: string;
 	private codeVerifier: string;
 
-	constructor(private window: BrowserWindow) { }
+	constructor(private window: BrowserWindow, private options?: MsalOptions) { 
+		// Read the config file, if it exists.
+		let capConfig: any;
+		try {
+			capConfig = JSON.parse(fs.readFileSync('./capacitor.config.json', 'utf-8'));
+		} catch (error) {
+			console.error(error);
+		}
+
+		// Copy the options to an internal object.
+		this.options = Object.assign({}, capConfig.plugins.Msal, this.options);
+	}
 	
 	public async init(): Promise<void> {
-		// TODO: Pull all necessary information from configuration.
-		const tenant = 'organizations';
-		const redirectUri = '';
-		const clientId = '';
-
-		const issuer =
-			await Issuer.discover(`https://login.microsoftonline.com/${tenant}/v2.0`);
+		// Dynamically build the OAuth client information.
+		const issuerUrl = `https://login.microsoftonline.com/${this.options.tenant}/v2.0`;
+		const issuer = await Issuer.discover(issuerUrl);
 
 		this.client = new issuer.Client({
-			client_id: clientId,
-			redriect_uris: [redirectUri],
+			client_id: this.options.clientId,
+			redriect_uris: [this.options.redirectUri],
 			response_types: ['code']
 		});
 
 		// Register the scheme used by the Redirect URI.
-		const scheme = new URL(redirectUri).protocol;
+		const scheme = new URL(this.options.redirectUri).protocol;
 		protocol.registerHttpProtocol(scheme, async (request, callback) => {
 			const params = this.client.callbackParams(request.url);
-			this.tokens = await this.client.callback(redirectUri, params, {
+			this.tokens = await this.client.callback(this.options.redirectUri, params, {
 				response_type: 'code',
 				state: this.state,
 				code_verifier: this.codeVerifier
