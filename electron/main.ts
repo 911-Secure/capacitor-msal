@@ -1,4 +1,4 @@
-import fs from 'fs';
+import { readFileSync } from 'fs';
 import { ipcMain, protocol, shell, BrowserWindow } from 'electron';
 import { Issuer, Client, generators, TokenSet } from 'openid-client';
 
@@ -16,15 +16,16 @@ export class CapacitorMsal {
 
 	constructor(private window: BrowserWindow, private options?: MsalOptions) { 
 		// Read the config file, if it exists.
-		let capConfig: any;
+		let capConfig: MsalOptions;
 		try {
-			capConfig = JSON.parse(fs.readFileSync('./capacitor.config.json', 'utf-8'));
+			const file = readFileSync('./capacitor.config.json', 'utf-8');
+			capConfig = JSON.parse(file).plugins.Msal;
 		} catch (error) {
 			console.error(error);
 		}
 
 		// Copy the options to an internal object.
-		this.options = Object.assign({}, capConfig.plugins.Msal, this.options);
+		this.options = Object.assign({}, capConfig, this.options);
 	}
 	
 	public async init(): Promise<void> {
