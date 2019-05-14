@@ -6,18 +6,18 @@
   "types": "dist/esm/index.d.ts",
   "scripts": {
     "prebuild": "npm run clean",
-    "build": "tsc",
+    "build": "run-s build:*",
+    "build:web": "tsc",
+    "build:electron": "cd electron && npm run build",
     "clean": "rm -rf ./dist",
     "watch": "tsc --watch",
-    "prepare": "run-s prepare:*",
-    "prepare:web": "npm run build",
-    "prepare:electron": "cd electron && npm run build"
+    "prepare": "npm run build"
   },
   "author": "911 Secure",
   "license": "MIT",
   "dependencies": {
     "@capacitor/core": "latest",
-    "openid-client": "^3.1.0"
+    "openid-client": "^2.5.0"
   },
   "devDependencies": {
     "@capacitor/android": "latest",
