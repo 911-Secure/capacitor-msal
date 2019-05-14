@@ -45,7 +45,6 @@ export class CapacitorMsal {
 
 		this.client = new issuer.Client({
 			client_id: this.options.clientId,
-			redriect_uris: [this.options.redirectUri],
 			response_types: ['code']
 		});
 
@@ -76,7 +75,8 @@ export class CapacitorMsal {
 			state: this.state,
 			response_mode: 'query',
 			code_challenge_method: 'S256',
-			code_challenge: challenge
+			code_challenge: challenge,
+			redirect_uri: this.options.redirectUri
 		});
 		shell.openExternal(authorizeUrl);
 	}
