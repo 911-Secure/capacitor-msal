@@ -16,7 +16,8 @@
   "author": "911 Secure",
   "license": "MIT",
   "dependencies": {
-    "@capacitor/core": "latest"
+    "@capacitor/core": "latest",
+    "openid-client": "^3.1.0"
   },
   "devDependencies": {
     "@capacitor/android": "latest",
