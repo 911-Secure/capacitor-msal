@@ -188,23 +188,6 @@ declare module 'openid-client' {
 		[param: string]: any;
 	}
 
-	const generators: {
-		/**
-		 * Generates random bytes and encodes them in url safe base64. This method is
-		 * also aliased as `generators.nonce`, `generators.state` and `generators.codeVerifier`
-		 * @param {number} [bytes=32] Number indicating the number of bytes to generate.
-		 * @returns {string}
-		 */
-		random(bytes?: number): string;
-
-		/**
-		 * Calculates the S256 PKCE code challenge for an arbitrary code verifier.
-		 * @param {string} verifier Code verifier to calculate the S256 code challenge for.
-		 * @returns {string}
-		 */
-		codeChallenge(verifier: string): string;
-	};
-
 	/**
 	 * Represents a set of tokens retrieved from either authorization callback or
 	 * successful token endpoint grant call.

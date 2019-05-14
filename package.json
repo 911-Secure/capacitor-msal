@@ -17,6 +17,7 @@
   "license": "MIT",
   "dependencies": {
     "@capacitor/core": "latest",
+    "base64url": "^3.0.1",
     "openid-client": "^2.5.0"
   },
   "devDependencies": {

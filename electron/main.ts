@@ -1,6 +1,16 @@
 import { readFileSync } from 'fs';
+import { createHash, randomBytes } from 'crypto';
+import base64Url from 'base64url';
 import { ipcMain, protocol, shell, BrowserWindow } from 'electron';
-import { Issuer, Client, generators, TokenSet } from 'openid-client';
+import { Issuer, Client, TokenSet } from 'openid-client';
+
+function random(bytes = 32): string {
+	return base64Url.encode(randomBytes(bytes));
+}
+
+function codeChallenge(codeVerifier: string): string {
+	return base64Url.encode(createHash('sha256').update(codeVerifier).digest());
+}
 
 interface MsalOptions {
 	tenant: string;
@@ -56,9 +66,9 @@ export class CapacitorMsal {
 
 	private async login(): Promise<any> {
 		// Generate the nonces used by OAuth.
-		this.state = generators.random();
-		this.codeVerifier = generators.random();
-		const codeChallenge = generators.codeChallenge(this.codeVerifier);
+		this.state = random();
+		this.codeVerifier = random();
+		const challenge = codeChallenge(this.codeVerifier);
 
 		// Open the user's browsers to the sign-in page.
 		const authorizeUrl = this.client.authorizationUrl({
@@ -66,7 +76,7 @@ export class CapacitorMsal {
 			state: this.state,
 			response_mode: 'query',
 			code_challenge_method: 'S256',
-			code_challenge: codeChallenge
+			code_challenge: challenge
 		});
 		shell.openExternal(authorizeUrl);
 	}
