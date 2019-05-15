@@ -1,6 +1,6 @@
+import promiseIpc from 'electron-promise-ipc';
 import { WebPlugin } from '@capacitor/core';
 import { MsalPlugin } from '..';
-import { ipcRenderer } from 'electron';
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
 	private _user: any;
@@ -16,14 +16,8 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		return this._user;
 	}
 
-	async login(): Promise<any> {
-		return new Promise<any>(resolve => {
-			ipcRenderer.send('capacitor-msal-login');
-			ipcRenderer.once('capacitor-msal-login-reply', (_event: any, user: any) => {
-				this._user = user;
-				resolve(user);
-			});
-		});
+	login(): Promise<any> {
+		return promiseIpc.send<any>('capacitor-msal-login');
 	}
 
 	acquireToken(): Promise<{ token: string; }> {

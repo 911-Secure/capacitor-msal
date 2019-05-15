@@ -4,6 +4,7 @@
 		"outDir": "dist"
 	},
 	"files": [
-		"renderer.ts"
+		"renderer.ts",
+		"electron-promise-ipc.d.ts"
 	]
 }

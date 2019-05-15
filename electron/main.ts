@@ -3,8 +3,9 @@ import base64Url from 'base64url';
 import FormData from 'form-data';
 import fetch from 'electron-fetch';
 import jwtDecode from 'jwt-decode';
+import promiseIpc from 'electron-promise-ipc';
 import { createHash, randomBytes } from 'crypto';
-import { ipcMain, BrowserWindow } from 'electron';
+import { BrowserWindow } from 'electron';
 
 function random(bytes = 32): string {
 	return base64Url.encode(randomBytes(bytes));
@@ -52,10 +53,11 @@ export class CapacitorMsal {
 		// Copy the options to an internal object.
 		this.options = Object.assign({}, capConfig, this.options);
 
-		ipcMain.on('capacitor-msal-login', async (event: any) =>{
-			const user = await this.login();
-			event.reply('capacitor-msal-login-reply', user);
-		});
+		// ipcMain.on('capacitor-msal-login', async (event: any) =>{
+		// 	const user = await this.login();
+		// 	event.reply('capacitor-msal-login-reply', user);
+		// });
+		promiseIpc.on<any>('capacitor-msal-login', () => this.login());
 	}
 
 	private async login(): Promise<any> {

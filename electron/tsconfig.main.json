@@ -6,6 +6,7 @@
 		"esModuleInterop": true
 	},
 	"files": [
-		"main.ts"
+		"main.ts",
+		"electron-promise-ipc.d.ts"
 	]
 }
