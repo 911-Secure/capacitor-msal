@@ -18,6 +18,7 @@
   "dependencies": {
     "@capacitor/core": "latest",
     "base64url": "^3.0.1",
+    "electron-is-dev": "^1.1.0",
     "openid-client": "^2.5.0"
   },
   "devDependencies": {

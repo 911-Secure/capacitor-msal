@@ -1,8 +1,10 @@
 import { readFileSync } from 'fs';
 import { createHash, randomBytes } from 'crypto';
-import base64Url from 'base64url';
-import { ipcMain, protocol, shell, BrowserWindow } from 'electron';
+import { ipcMain, protocol, shell, BrowserWindow, app } from 'electron';
 import { Issuer, Client, TokenSet } from 'openid-client';
+import base64Url from 'base64url';
+import isDevMode from 'electron-is-dev';
+import path from 'path';
 
 function random(bytes = 32): string {
 	return base64Url.encode(randomBytes(bytes));
@@ -49,7 +51,16 @@ export class CapacitorMsal {
 		});
 
 		// Register the scheme used by the Redirect URI.
-		const scheme = new URL(this.options.redirectUri).protocol;
+		const scheme = new URL(this.options.redirectUri).protocol.slice(0, -1);
+		
+		if (isDevMode) {
+			// In development, the electron path needs to be explicitly specified.
+			const electron = path.join(__dirname, 'node_modules/.bin/electron')
+			app.setAsDefaultProtocolClient(scheme, electron, ['.']);
+		} else {
+			app.setAsDefaultProtocolClient(scheme);
+		}
+		
 		protocol.registerHttpProtocol(scheme, async request => {
 			const params = this.client.callbackParams(request.url);
 			this.tokens = await this.client.callback(this.options.redirectUri, params, {
@@ -69,7 +80,7 @@ export class CapacitorMsal {
 		this.codeVerifier = random();
 		const challenge = codeChallenge(this.codeVerifier);
 
-		// Open the user's browsers to the sign-in page.
+		// Open the user's browser to the sign-in page.
 		const authorizeUrl = this.client.authorizationUrl({
 			scope: 'openid',
 			state: this.state,
