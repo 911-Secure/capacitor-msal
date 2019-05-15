@@ -5,7 +5,6 @@
 		"outDir": "dist"
 	},
 	"files": [
-		"main.ts",
-		"openid-client.d.ts"
+		"main.ts"
 	]
 }

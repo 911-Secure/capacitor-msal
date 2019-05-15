@@ -1,8 +1,10 @@
 import { readFileSync } from 'fs';
 import { createHash, randomBytes } from 'crypto';
 import { ipcMain, BrowserWindow } from 'electron';
-import { Issuer, Client, TokenSet } from 'openid-client';
 import base64Url from 'base64url';
+import FormData from 'form-data';
+import fetch from 'electron-fetch';
+import jwtDecode from 'jwt-decode';
 
 function random(bytes = 32): string {
 	return base64Url.encode(randomBytes(bytes));
@@ -12,15 +14,30 @@ function codeChallenge(codeVerifier: string): string {
 	return base64Url.encode(createHash('sha256').update(codeVerifier).digest());
 }
 
+function buildFormData(obj: any): FormData {
+    return Object.keys(obj).reduce((data, key) => {
+        data.append(key, obj[key]);
+        return data;
+    }, new FormData());
+}
+
 interface MsalOptions {
 	tenant: string;
 	redirectUri: string;
 	clientId: string;
 }
 
+interface TokenResponse {
+	access_token: string;
+	token_type: string;
+	expires_in: number;
+	scope: string;
+	refresh_token?: string;
+	id_token?: string;
+}
+
 export class CapacitorMsal {
-	private client: Client;
-	private tokens: TokenSet;
+	private tokens: TokenResponse;
 
 	constructor(private window: BrowserWindow, private options?: MsalOptions) { 
 		// Read the config file, if it exists.
@@ -40,18 +57,6 @@ export class CapacitorMsal {
 			event.reply('capacitor-msal-login-reply', user);
 		});
 	}
-	
-	public async init(): Promise<void> {
-		// Dynamically build the OAuth client information.
-		const issuerUrl = `https://login.microsoftonline.com/${this.options.tenant}/v2.0`;
-		const issuer = await Issuer.discover(issuerUrl);
-
-		this.client = new issuer.Client({
-			client_id: this.options.clientId,
-			response_types: ['code'],
-			token_endpoint_auth_method: 'none'
-		});
-	}
 
 	private async login(): Promise<any> {
 		// Generate the nonces used by OAuth.
@@ -59,31 +64,55 @@ export class CapacitorMsal {
 		const codeVerifier = random();
 		const challenge = codeChallenge(codeVerifier);
 
-		// Open the user's browser to the sign-in page.
-		const authorizeUrl = this.client.authorizationUrl({
+		// Build the authorization URL.
+		const authorizeUrl = new URL(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/authorize`);
+		const authParams = new URLSearchParams({
+			client_id: this.options.clientId,
+			response_type: 'code',
+			redirect_uri: this.options.redirectUri,
 			scope: 'openid',
-			state: state,
 			response_mode: 'query',
+			state: state,
 			code_challenge_method: 'S256',
-			code_challenge: challenge,
-			redirect_uri: this.options.redirectUri
+			code_challenge: challenge
 		});
+		authorizeUrl.search = authParams.toString();
+		
+		// Open the user's browser to the sign-in page.
 		const redirectUrl = await this.loginWithBrowser(authorizeUrl);
 
-		// Exchange the authorization code for a set of tokens.
-		const params = this.client.callbackParams(redirectUrl);
-		this.tokens = await this.client.authorizationCallback(this.options.redirectUri, params, {
-			response_type: 'code',
-			state: state,
+		// TODO: Add error handling
+
+		// Build the token request.
+		const tokenUrl = new URL(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/token`);
+		const tokenParams = buildFormData({
+			client_id: this.options.clientId,
+			grant_type: 'authorization_code',
+			scope: 'openid',
+			code: redirectUrl.searchParams.get('code'),
+			redirect_uri: this.options.redirectUri,
 			code_verifier: codeVerifier
 		});
 
-		// Return the user's information from the id_token.
-		return this.tokens.claims();
+		// Exchange the authorization code for a set of tokens.
+		const res = await fetch(tokenUrl.href, {
+			method: 'POST',
+			body: tokenParams
+		});
+		const response = await res.json<TokenResponse>();
+
+		// TODO: Add error handling
+
+		this.tokens = response;
+
+		// TODO: Add validation
+		return jwtDecode(this.tokens.id_token);
+
+		// TODO: Add persistent storage
 	}
 
-	private async loginWithBrowser(authorizeUrl: string): Promise<string> {
-		return new Promise<string>(resolve => {
+	private async loginWithBrowser(authorizeUrl: URL): Promise<URL> {
+		return new Promise<URL>(resolve => {
 			const window = new BrowserWindow({
 				width: 1000,
 				height: 600,
@@ -95,7 +124,7 @@ export class CapacitorMsal {
 				}
 			});
 			
-			window.loadURL(authorizeUrl);
+			window.loadURL(authorizeUrl.href);
 			
 			window.on('ready-to-show', () => {
 				window.show();
@@ -104,7 +133,7 @@ export class CapacitorMsal {
 			window.webContents.on('will-redirect', (event, url) => {
 				event.preventDefault();
 				window.close();
-				resolve(url);
+				resolve(new URL(url));
 			});
 		});
 	}
