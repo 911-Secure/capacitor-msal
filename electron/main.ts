@@ -48,7 +48,8 @@ export class CapacitorMsal {
 
 		this.client = new issuer.Client({
 			client_id: this.options.clientId,
-			response_types: ['code']
+			response_types: ['code'],
+			token_endpoint_auth_method: 'none'
 		});
 	}
 
