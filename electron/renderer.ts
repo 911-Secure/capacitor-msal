@@ -10,19 +10,20 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 			name: 'Msal',
 			platforms: ['electron']
 		});
-
-		ipcRenderer.on('capacitor-msal-user-logged-in', (_event: Event, user: any) => {
-			this._user = user;
-			this.notifyListeners('userLoggedIn', user);
-		});
 	}
 
 	get user(): any {
 		return this._user;
 	}
 
-	async login(): Promise<void> {
-		ipcRenderer.send('capacitor-msal-login');
+	async login(): Promise<any> {
+		return new Promise<any>(resolve => {
+			ipcRenderer.send('capacitor-msal-login');
+			ipcRenderer.once('capacitor-msal-login-reply', (_event: any, user: any) => {
+				this._user = user;
+				resolve(user);
+			});
+		});
 	}
 
 	acquireToken(): Promise<{ token: string; }> {

@@ -1,8 +1,7 @@
 import { readFileSync } from 'fs';
 import { createHash, randomBytes } from 'crypto';
-import { ipcMain, shell, BrowserWindow, app } from 'electron';
+import { ipcMain, BrowserWindow } from 'electron';
 import { Issuer, Client, TokenSet } from 'openid-client';
-import { resolve } from 'path';
 import base64Url from 'base64url';
 
 function random(bytes = 32): string {
@@ -22,8 +21,6 @@ interface MsalOptions {
 export class CapacitorMsal {
 	private client: Client;
 	private tokens: TokenSet;
-	private state: string;
-	private codeVerifier: string;
 
 	constructor(private window: BrowserWindow, private options?: MsalOptions) { 
 		// Read the config file, if it exists.
@@ -37,6 +34,11 @@ export class CapacitorMsal {
 
 		// Copy the options to an internal object.
 		this.options = Object.assign({}, capConfig, this.options);
+
+		ipcMain.on('capacitor-msal-login', async (event: any) =>{
+			const user = await this.login();
+			event.reply('capacitor-msal-login-reply', user);
+		});
 	}
 	
 	public async init(): Promise<void> {
@@ -48,62 +50,60 @@ export class CapacitorMsal {
 			client_id: this.options.clientId,
 			response_types: ['code']
 		});
-
-		// Register the scheme used by the Redirect URI.
-		const scheme = new URL(this.options.redirectUri).protocol.slice(0, -1);
-		
-		if (process.defaultApp) {
-			if (process.argv.length >= 2) {
-				// In development, the electron path needs to be explicitly specified.
-				const execPath = process.execPath.replace(/(\s+)/g, '\\$1');
-				app.setAsDefaultProtocolClient(scheme, execPath, [resolve(process.argv[1])]);
-			}
-		} else {
-			app.setAsDefaultProtocolClient(scheme);
-		}
-
-		// Protocol handler for macOS.
-		app.on('open-url', (event, url) => {
-			event.preventDefault();
-			this.loginCallback(url);
-		});
-
-		// Protocol handler for Windows/Linux.
-		app.on('second-instance', (_event, argv) => {
-			// In development, there is an extra argument.
-			const url = process.defaultApp ? argv[2] : argv[1];
-			this.loginCallback(url);
-		});
-		
-		ipcMain.on('capacitor-msal-login', () => this.login());
 	}
 
-	private async login(): Promise<void> {
+	private async login(): Promise<any> {
 		// Generate the nonces used by OAuth.
-		this.state = random();
-		this.codeVerifier = random();
-		const challenge = codeChallenge(this.codeVerifier);
+		const state = random();
+		const codeVerifier = random();
+		const challenge = codeChallenge(codeVerifier);
 
 		// Open the user's browser to the sign-in page.
 		const authorizeUrl = this.client.authorizationUrl({
 			scope: 'openid',
-			state: this.state,
+			state: state,
 			response_mode: 'query',
 			code_challenge_method: 'S256',
 			code_challenge: challenge,
 			redirect_uri: this.options.redirectUri
 		});
-		shell.openExternal(authorizeUrl);
-	}
+		const redirectUrl = await this.loginWithBrowser(authorizeUrl);
 
-	private async loginCallback(url: string): Promise<any> {
-		console.log('Received external URL', url);
-		const params = this.client.callbackParams(url);
+		// Exchange the authorization code for a set of tokens.
+		const params = this.client.callbackParams(redirectUrl);
 		this.tokens = await this.client.callback(this.options.redirectUri, params, {
 			response_type: 'code',
-			state: this.state,
-			code_verifier: this.codeVerifier
+			state: state,
+			code_verifier: codeVerifier
 		});
-		this.window.webContents.send('capacitor-msal-user-logged-in', this.tokens.claims());
+
+		// Return the user's information from the id_token.
+		return this.tokens.claims();
+	}
+
+	private async loginWithBrowser(authorizeUrl: string): Promise<string> {
+		return new Promise<string>(resolve => {
+			const window = new BrowserWindow({
+				width: 1000,
+				height: 600,
+				show: false,
+				parent: this.window,
+				modal: true,
+				webPreferences: {
+					nodeIntegration: false
+				}
+			});
+			
+			window.loadURL(authorizeUrl);
+			
+			window.on('ready-to-show', () => {
+				window.show();
+			});
+			
+			window.webContents.on('will-redirect', (event, url) => {
+				event.preventDefault();
+				resolve(url);
+			});
+		});
 	}
 }
