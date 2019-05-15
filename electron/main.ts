@@ -6,7 +6,7 @@ import jwtDecode from 'jwt-decode';
 import promiseIpc from 'electron-promise-ipc';
 import { createHash, randomBytes } from 'crypto';
 import { BrowserWindow } from 'electron';
-import { User, TokenResponse } from '..';
+import { User, TokenResponse } from '../dist/esm';
 
 function random(bytes = 32): string {
 	return base64Url.encode(randomBytes(bytes));
@@ -43,9 +43,10 @@ export class CapacitorMsal {
 		}
 
 		// Copy the options to an internal object.
-		this.options = Object.assign({}, capConfig, this.options);
+		this.options = Object.assign({}, capConfig, options);
 
 		promiseIpc.on<User>('capacitor-msal-login', () => this.login());
+		promiseIpc.on<TokenResponse>('capacitor-msal-acquire-token', () => this.acquireToken());
 	}
 
 	private async login(): Promise<User> {
@@ -69,7 +70,7 @@ export class CapacitorMsal {
 		authorizeUrl.search = authParams.toString();
 		
 		// Open the user's browser to the sign-in page.
-		const redirectUrl = await this.loginWithBrowser(authorizeUrl);
+		const redirectUrl = await this.loginWithPopup(authorizeUrl);
 
 		// TODO: Add error handling
 		// TODO: Add validation
@@ -102,7 +103,12 @@ export class CapacitorMsal {
 		// TODO: Add persistent storage
 	}
 
-	private async loginWithBrowser(authorizeUrl: URL): Promise<URL> {
+	private async acquireToken(): Promise<TokenResponse> {
+		// TODO: Add refresh
+		return this.tokens;
+	}
+
+	private async loginWithPopup(authorizeUrl: URL): Promise<URL> {
 		return new Promise<URL>(resolve => {
 			const window = new BrowserWindow({
 				width: 1000,
