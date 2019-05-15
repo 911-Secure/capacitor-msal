@@ -6,6 +6,7 @@ import jwtDecode from 'jwt-decode';
 import promiseIpc from 'electron-promise-ipc';
 import { createHash, randomBytes } from 'crypto';
 import { BrowserWindow } from 'electron';
+import { User } from '..';
 
 function random(bytes = 32): string {
 	return base64Url.encode(randomBytes(bytes));
@@ -53,14 +54,10 @@ export class CapacitorMsal {
 		// Copy the options to an internal object.
 		this.options = Object.assign({}, capConfig, this.options);
 
-		// ipcMain.on('capacitor-msal-login', async (event: any) =>{
-		// 	const user = await this.login();
-		// 	event.reply('capacitor-msal-login-reply', user);
-		// });
-		promiseIpc.on<any>('capacitor-msal-login', () => this.login());
+		promiseIpc.on<User>('capacitor-msal-login', () => this.login());
 	}
 
-	private async login(): Promise<any> {
+	private async login(): Promise<User> {
 		// Generate the nonces used by OAuth.
 		const state = random();
 		const codeVerifier = random();
@@ -84,6 +81,7 @@ export class CapacitorMsal {
 		const redirectUrl = await this.loginWithBrowser(authorizeUrl);
 
 		// TODO: Add error handling
+		// TODO: Add validation
 
 		// Build the token request.
 		const tokenUrl = new URL(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/token`);
@@ -108,7 +106,7 @@ export class CapacitorMsal {
 		this.tokens = response;
 
 		// TODO: Add validation
-		return jwtDecode(this.tokens.id_token);
+		return jwtDecode<User>(this.tokens.id_token);
 
 		// TODO: Add persistent storage
 	}

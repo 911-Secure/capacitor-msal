@@ -1,9 +1,9 @@
 import promiseIpc from 'electron-promise-ipc';
 import { WebPlugin } from '@capacitor/core';
-import { MsalPlugin } from '..';
+import { MsalPlugin, User } from '..';
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
-	private _user: any;
+	private _user: User;
 	
 	constructor() {
 		super({
@@ -12,12 +12,12 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		});
 	}
 
-	get user(): any {
+	get user(): User {
 		return this._user;
 	}
 
-	login(): Promise<any> {
-		return promiseIpc.send<any>('capacitor-msal-login');
+	login(): Promise<User> {
+		return promiseIpc.send<User>('capacitor-msal-login');
 	}
 
 	acquireToken(): Promise<{ token: string; }> {

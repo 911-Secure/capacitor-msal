@@ -1,5 +1,5 @@
 import { WebPlugin } from '@capacitor/core';
-import { MsalPlugin } from './definitions';
+import { MsalPlugin, User } from './definitions';
 
 export class MsalWeb extends WebPlugin implements MsalPlugin {
 	constructor() {
@@ -9,11 +9,11 @@ export class MsalWeb extends WebPlugin implements MsalPlugin {
 		});
 	}
 
-	get user(): any {
+	get user(): User {
 		throw new Error("Method not implemented.");
 	}
 
-	login(): Promise<void> {
+	login(): Promise<User> {
 		throw new Error("Method not implemented.");
 	}
 
