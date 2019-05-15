@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { createHash, randomBytes } from 'crypto';
-import { ipcMain, protocol, shell, BrowserWindow, app } from 'electron';
+import { ipcMain, shell, BrowserWindow, app } from 'electron';
 import { Issuer, Client, TokenSet } from 'openid-client';
 import { resolve } from 'path';
 import base64Url from 'base64url';
@@ -61,21 +61,24 @@ export class CapacitorMsal {
 		} else {
 			app.setAsDefaultProtocolClient(scheme);
 		}
-		
-		protocol.registerHttpProtocol(scheme, async request => {
-			const params = this.client.callbackParams(request.url);
-			this.tokens = await this.client.callback(this.options.redirectUri, params, {
-				response_type: 'code',
-				state: this.state,
-				code_verifier: this.codeVerifier
-			});
-			this.window.webContents.send('capacitor-msal-user-logged-in', this.tokens.claims());
+
+		// Protocol handler for macOS.
+		app.on('open-url', (event, url) => {
+			event.preventDefault();
+			this.loginCallback(url);
 		});
 
+		// Protocol handler for Windows/Linux.
+		app.on('second-instance', (_event, argv) => {
+			// In development, there is an extra argument.
+			const url = process.defaultApp ? argv[2] : argv[1];
+			this.loginCallback(url);
+		});
+		
 		ipcMain.on('capacitor-msal-login', () => this.login());
 	}
 
-	private async login(): Promise<any> {
+	private async login(): Promise<void> {
 		// Generate the nonces used by OAuth.
 		this.state = random();
 		this.codeVerifier = random();
@@ -91,5 +94,16 @@ export class CapacitorMsal {
 			redirect_uri: this.options.redirectUri
 		});
 		shell.openExternal(authorizeUrl);
+	}
+
+	private async loginCallback(url: string): Promise<any> {
+		console.log('Received external URL', url);
+		const params = this.client.callbackParams(url);
+		this.tokens = await this.client.callback(this.options.redirectUri, params, {
+			response_type: 'code',
+			state: this.state,
+			code_verifier: this.codeVerifier
+		});
+		this.window.webContents.send('capacitor-msal-user-logged-in', this.tokens.claims());
 	}
 }
