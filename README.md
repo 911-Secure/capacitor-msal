@@ -48,6 +48,15 @@ mainWindow = new BrowserWindow({
 });
 ```
 
+Finally, this plugin only works with single instance applications. The following code should be present in your main process.
+```js
+const isFirstInstance = app.requestSingleInstanceLock();
+if (!isFirstInstance) {
+	app.quit();
+	return;
+}
+```
+
 ### Android
 
 Coming soon&trade;
