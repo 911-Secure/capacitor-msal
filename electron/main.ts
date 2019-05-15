@@ -71,7 +71,7 @@ export class CapacitorMsal {
 
 		// Exchange the authorization code for a set of tokens.
 		const params = this.client.callbackParams(redirectUrl);
-		this.tokens = await this.client.callback(this.options.redirectUri, params, {
+		this.tokens = await this.client.authorizationCallback(this.options.redirectUri, params, {
 			response_type: 'code',
 			state: state,
 			code_verifier: codeVerifier

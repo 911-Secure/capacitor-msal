@@ -64,7 +64,7 @@ declare module 'openid-client' {
 		 * @param checks 
 		 * @param extras 
 		 */
-		callback(redirectUri: string, parameters: object, checks?: {
+		authorizationCallback(redirectUri: string, parameters: object, checks?: {
 			/**
 			 * When provided the authorization response will be checkked for the presence
 			 * of required parameters for a given response_type. Use of this check is recommended.
@@ -99,18 +99,6 @@ declare module 'openid-client' {
 			 * Default: uses client's `default_max_age`.
 			 */
 			max_age?: number;
-		}, extras?: {
-			/**
-			 * Extra request body properties to be sent to the AS during code exchange.
-			 */
-			exchangeBody?: object;
-
-			/**
-			 * Extra client assertion payload parameters to be sent as part of a client
-			 * JWT assertion. This is only used when the client's `token_endpoint_auth_method`
-			 * is either `client_secret_jwt` or `private_key_jwt`.
-			 */
-			clientAssertionPayload?: object;
 		}): Promise<TokenSet>;
 	}
 
