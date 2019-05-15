@@ -1,10 +1,10 @@
-import { readFileSync } from 'fs';
-import { createHash, randomBytes } from 'crypto';
-import { ipcMain, BrowserWindow } from 'electron';
+import fs from 'fs';
 import base64Url from 'base64url';
 import FormData from 'form-data';
 import fetch from 'electron-fetch';
 import jwtDecode from 'jwt-decode';
+import { createHash, randomBytes } from 'crypto';
+import { ipcMain, BrowserWindow } from 'electron';
 
 function random(bytes = 32): string {
 	return base64Url.encode(randomBytes(bytes));
@@ -43,7 +43,7 @@ export class CapacitorMsal {
 		// Read the config file, if it exists.
 		let capConfig: MsalOptions;
 		try {
-			const file = readFileSync('./capacitor.config.json', 'utf-8');
+			const file = fs.readFileSync('./capacitor.config.json', 'utf-8');
 			capConfig = JSON.parse(file).plugins.Msal;
 		} catch (error) {
 			console.error(error);
