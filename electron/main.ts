@@ -2,9 +2,8 @@ import { readFileSync } from 'fs';
 import { createHash, randomBytes } from 'crypto';
 import { ipcMain, protocol, shell, BrowserWindow, app } from 'electron';
 import { Issuer, Client, TokenSet } from 'openid-client';
+import { resolve } from 'path';
 import base64Url from 'base64url';
-import isDevMode from 'electron-is-dev';
-import path from 'path';
 
 function random(bytes = 32): string {
 	return base64Url.encode(randomBytes(bytes));
@@ -53,10 +52,12 @@ export class CapacitorMsal {
 		// Register the scheme used by the Redirect URI.
 		const scheme = new URL(this.options.redirectUri).protocol.slice(0, -1);
 		
-		if (isDevMode) {
-			// In development, the electron path needs to be explicitly specified.
-			const electron = path.join(__dirname, 'node_modules/.bin/electron')
-			app.setAsDefaultProtocolClient(scheme, electron, ['.']);
+		if (process.defaultApp) {
+			if (process.argv.length >= 2) {
+				// In development, the electron path needs to be explicitly specified.
+				const execPath = process.execPath.replace(/(\s+)/g, '\\$1');
+				app.setAsDefaultProtocolClient(scheme, execPath, [resolve(process.argv[1])]);
+			}
 		} else {
 			app.setAsDefaultProtocolClient(scheme);
 		}
