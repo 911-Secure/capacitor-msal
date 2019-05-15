@@ -102,6 +102,7 @@ export class CapacitorMsal {
 			
 			window.webContents.on('will-redirect', (event, url) => {
 				event.preventDefault();
+				window.close();
 				resolve(url);
 			});
 		});
