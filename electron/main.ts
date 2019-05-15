@@ -6,7 +6,7 @@ import jwtDecode from 'jwt-decode';
 import promiseIpc from 'electron-promise-ipc';
 import { createHash, randomBytes } from 'crypto';
 import { BrowserWindow } from 'electron';
-import { User } from '..';
+import { User, TokenResponse } from '..';
 
 function random(bytes = 32): string {
 	return base64Url.encode(randomBytes(bytes));
@@ -27,15 +27,6 @@ interface MsalOptions {
 	tenant: string;
 	redirectUri: string;
 	clientId: string;
-}
-
-interface TokenResponse {
-	access_token: string;
-	token_type: string;
-	expires_in: number;
-	scope: string;
-	refresh_token?: string;
-	id_token?: string;
 }
 
 export class CapacitorMsal {

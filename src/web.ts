@@ -1,5 +1,5 @@
 import { WebPlugin } from '@capacitor/core';
-import { MsalPlugin, User } from './definitions';
+import { MsalPlugin, User, TokenResponse } from './definitions';
 
 export class MsalWeb extends WebPlugin implements MsalPlugin {
 	constructor() {
@@ -17,7 +17,7 @@ export class MsalWeb extends WebPlugin implements MsalPlugin {
 		throw new Error("Method not implemented.");
 	}
 
-	acquireToken(): Promise<{ token: string; }> {
+	acquireToken(): Promise<TokenResponse> {
 		throw new Error("Method not implemented.");
 	}
 }

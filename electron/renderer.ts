@@ -1,6 +1,6 @@
 import promiseIpc from 'electron-promise-ipc';
 import { WebPlugin } from '@capacitor/core';
-import { MsalPlugin, User } from '..';
+import { MsalPlugin, User, TokenResponse } from '..';
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
 	private _user: User;
@@ -20,7 +20,7 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		return promiseIpc.send<User>('capacitor-msal-login');
 	}
 
-	acquireToken(): Promise<{ token: string; }> {
+	acquireToken(): Promise<TokenResponse> {
 		throw new Error("Method not implemented.");
 	}
 }
