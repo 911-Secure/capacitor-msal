@@ -2,7 +2,6 @@ declare module "@capacitor/core" {
 	interface PluginRegistry {
 		Msal?: MsalPlugin;
 	}
-	export const Plugins: PluginRegistry;
 }
 
 export interface MsalPlugin {
