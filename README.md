@@ -18,7 +18,12 @@ This plugin is not supported in a pure web application.
 
 ### Electron
 
-Both the Electron implementation and the needed registration function are exported as ES Modules. The `esm` package is recommended to import these modules.
+Once this plugin has been installed in your application, the Electron implementation needs to be installed into your Electron app as a dependency. Assuming your Electron app is one level below your root `package.json`, use the following command.
+```bash
+npm install ../node_modules/capacitor-msal/electron/
+```
+
+Next, the Electron implementation needs to be registered with Capacitor. Both the Electron implementation and the needed registration function are exported as ES Modules. The `esm` package is recommended to import these modules.
 
 Create a script (e.g. `plugins.js`) with the following content.
 ```js
@@ -34,6 +39,7 @@ const { Msal } = load('capacitor-msal/electron');
 // Register the plugin.
 registerElectronPlugin(Msal);
 ```
+This will run in the renderer process to add Msal to the Capacitor Plugins proxy.
 
 Add the newly created script to the main window as a preload script. For example,
 ```js
@@ -46,15 +52,6 @@ mainWindow = new BrowserWindow({
 		preload: path.join(__dirname, 'plugins.js')
 	}
 });
-```
-
-Finally, this plugin only works with single instance applications. The following code should be present in your main process.
-```js
-const isFirstInstance = app.requestSingleInstanceLock();
-if (!isFirstInstance) {
-	app.quit();
-	return;
-}
 ```
 
 ### Android
