@@ -9,7 +9,8 @@
     "build": "tsc",
     "clean": "rm -rf ./dist",
     "watch": "tsc --watch",
-    "prepare": "npm run build"
+    "prepare": "run-s build prepare:electron",
+    "prepare:electron": "cd electron && npm run build"
   },
   "author": "911 Secure",
   "license": "MIT",
