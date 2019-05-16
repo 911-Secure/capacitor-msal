@@ -6,9 +6,7 @@
   "types": "dist/esm/index.d.ts",
   "scripts": {
     "prebuild": "npm run clean",
-    "build": "run-s build:*",
-    "build:web": "tsc",
-    "build:electron": "cd electron && npm run build",
+    "build": "tsc",
     "clean": "rm -rf ./dist",
     "watch": "tsc --watch",
     "prepare": "npm run build"
@@ -16,22 +14,17 @@
   "author": "911 Secure",
   "license": "MIT",
   "dependencies": {
-    "@capacitor/core": "latest",
-    "base64url": "^3.0.1",
-    "electron-fetch": "^1.3.0",
-    "electron-promise-ipc": "^1.2.2",
-    "form-data": "^2.3.3",
-    "jwt-decode": "^2.2.0"
+    "@capacitor/core": "latest"
   },
   "devDependencies": {
     "@capacitor/android": "latest",
     "@capacitor/electron": "latest",
     "@capacitor/ios": "latest",
-    "@types/form-data": "^2.2.1",
-    "@types/jwt-decode": "^2.2.1",
-    "electron": "^5.0.0",
     "npm-run-all": "^4.1.5",
     "typescript": "^3.2.4"
+  },
+  "optionalDependencies": {
+    "capacitor-msal-electron": "file:electron"
   },
   "files": [
     "dist/",
