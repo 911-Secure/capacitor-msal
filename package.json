@@ -7,10 +7,11 @@
   "scripts": {
     "prebuild": "npm run clean",
     "build": "tsc",
+    "prebuild:electron": "cd electron && npm install",
+    "build:electron": "cd electron && npm run build",
     "clean": "rm -rf ./dist",
     "watch": "tsc --watch",
-    "prepare": "run-s build prepare:electron",
-    "prepare:electron": "cd electron && npm run build"
+    "prepare": "run-s build build:electron"
   },
   "author": "911 Secure",
   "license": "MIT",
