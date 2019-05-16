@@ -27,6 +27,7 @@ interface MsalOptions {
 	tenant: string;
 	redirectUri: string;
 	clientId: string;
+	scopes: string[];
 }
 
 export class CapacitorMsal {
@@ -61,7 +62,7 @@ export class CapacitorMsal {
 			client_id: this.options.clientId,
 			response_type: 'code',
 			redirect_uri: this.options.redirectUri,
-			scope: 'openid',
+			scope: this.options.scopes.join(' '),
 			response_mode: 'query',
 			state: state,
 			code_challenge_method: 'S256',
@@ -80,7 +81,7 @@ export class CapacitorMsal {
 		const tokenParams = buildFormData({
 			client_id: this.options.clientId,
 			grant_type: 'authorization_code',
-			scope: 'openid',
+			scope: this.options.scopes.join(' '),
 			code: redirectUrl.searchParams.get('code'),
 			redirect_uri: this.options.redirectUri,
 			code_verifier: codeVerifier
