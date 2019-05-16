@@ -1,9 +1,9 @@
 declare module 'electron-promise-ipc' {
 	class PromiseIpcBase {
-		on<T>(route: string, listener: (...dataArgs: any[]) => Promise<T> | T): PromiseIpcBase;
-		send<T>(route: string, ...dataArgs: any[]): Promise<T>;
+		on(route: string, listener: (...dataArgs: any[]) => Promise<any> | any): PromiseIpcBase;
+		send(route: string, ...dataArgs: any[]): Promise<any>;
 	}
 
 	const promiseIpc: PromiseIpcBase;
-	export default promiseIpc;	
+	export default promiseIpc;
 }

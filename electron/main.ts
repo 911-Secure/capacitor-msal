@@ -45,8 +45,8 @@ export class CapacitorMsal {
 		// Copy the options to an internal object.
 		this.options = Object.assign({}, capConfig, options);
 
-		promiseIpc.on<User>('capacitor-msal-login', () => this.login());
-		promiseIpc.on<TokenResponse>('capacitor-msal-acquire-token', () => this.acquireToken());
+		promiseIpc.on('capacitor-msal-login', () => this.login());
+		promiseIpc.on('capacitor-msal-acquire-token', () => this.acquireToken());
 	}
 
 	private async login(): Promise<User> {

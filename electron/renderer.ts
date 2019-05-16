@@ -17,11 +17,11 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 	}
 
 	login(): Promise<User> {
-		return promiseIpc.send<User>('capacitor-msal-login');
+		return promiseIpc.send('capacitor-msal-login');
 	}
 
 	acquireToken(): Promise<TokenResponse> {
-		return promiseIpc.send<TokenResponse>('capacitor-msal-acquire-token');
+		return promiseIpc.send('capacitor-msal-acquire-token');
 	}
 }
 
