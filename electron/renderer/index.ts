@@ -1,6 +1,6 @@
 import promiseIpc from 'electron-promise-ipc';
 import { WebPlugin } from '@capacitor/core';
-import { MsalPlugin, User, TokenResponse } from '../dist/esm';
+import { MsalPlugin, User, TokenResponse } from 'capacitor-msal';
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
 	private _user: User;

@@ -1,0 +1,12 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"module": "commonjs",
+		"outDir": "../dist/main",
+		"esModuleInterop": true
+	},
+	"files": [
+		"index.ts",
+		"../electron-promise-ipc.d.ts"
+	]
+}

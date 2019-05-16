@@ -4,18 +4,18 @@
   "description": "A Capacitor plugin that provides OAuth 2.0 authentication using the Microsoft Authentication Library",
   "author": "911 Secure",
   "license": "MIT",
-  "main": "dist/main.js",
-  "module": "dist/renderer.js",
+  "main": "dist/main/index.js",
+  "module": "dist/renderer/index.js",
   "scripts": {
     "prebuild": "npm run clean",
     "build": "run-p build:*",
-    "build:main": "tsc --project tsconfig.main.json",
-    "build:renderer": "tsc --project tsconfig.renderer.json",
-    "clean": "rm -rf ./dist",
-    "prepare": "npm run build"
+    "build:main": "tsc --project main",
+    "build:renderer": "tsc --project renderer",
+    "clean": "rm -rf ./dist"
   },
   "dependencies": {
     "base64url": "^3.0.1",
+    "capacitor-msal": "file:..",
     "electron-fetch": "^1.3.0",
     "electron-promise-ipc": "^1.2.2",
     "form-data": "^2.3.3",
@@ -29,7 +29,6 @@
     "typescript": "^3.2.4"
   },
   "files": [
-    "dist/",
-    "package.json"
+    "dist/"
   ]
 }

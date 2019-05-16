@@ -6,7 +6,7 @@ import jwtDecode from 'jwt-decode';
 import promiseIpc from 'electron-promise-ipc';
 import { createHash, randomBytes } from 'crypto';
 import { BrowserWindow } from 'electron';
-import { User, TokenResponse } from '../dist/esm';
+import { User, TokenResponse } from 'capacitor-msal';
 
 function random(bytes = 32): string {
 	return base64Url.encode(randomBytes(bytes));
