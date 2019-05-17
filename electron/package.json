@@ -26,6 +26,7 @@
     "@types/form-data": "^2.2.1",
     "@types/jwt-decode": "^2.2.1",
     "electron": "^4.0.0",
+    "electron-log": "^3.0.5",
     "npm-run-all": "^4.1.5",
     "typescript": "^3.2.4"
   },
