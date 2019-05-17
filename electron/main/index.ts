@@ -74,7 +74,6 @@ export class CapacitorMsal {
 			await this.loginInteractive();
 		}
 
-		// TODO: Add validation
 		return jwtDecode<User>(this.tokens.id_token);
 	}
 
@@ -139,9 +138,9 @@ export class CapacitorMsal {
 		const responseState = redirectUrl.searchParams.get('state');
 		if (state !== responseState) {
 			throw new AuthError({
-				error: 'INVALID_STATE',
+				error: 'invalid_state',
 				error_description: 'The response state does not match the request state.'
-			})
+			});
 		}
 
 		// TODO: Add validation
@@ -166,7 +165,12 @@ export class CapacitorMsal {
 		if (this.tokensExpireAt > new Date()) return;
 
 		const refreshToken = await keytar.getPassword(keytarService, keytarAccount);
-		// TODO: Handle no available token.
+		if (!refreshToken) {
+			throw new AuthError({
+				error: 'interaction_required',
+				error_description: 'There is no refresh token available.'
+			});
+		}
 
 		const response = await fetch(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/token`, {
 			method: 'POST',
