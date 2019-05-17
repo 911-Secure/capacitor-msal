@@ -181,8 +181,13 @@ export class CapacitorMsal {
 	}
 
 	private async processTokenResponse(response: Response) {
-		// TODO: Add error handling
-		this.tokens = await response.json();
+		const tokens = await response.json();
+		if (tokens.error) {
+			throw new AuthError(tokens);
+		}
+
+		// Save the received tokens.
+		this.tokens = tokens;
 
 		// Compute when the tokens will expire.
 		this.tokensExpireAt = new Date(Date.now() + (1000 * this.tokens.expires_in));
