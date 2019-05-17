@@ -2,13 +2,15 @@ import fs from 'fs';
 import os from 'os';
 import base64Url from 'base64url';
 import FormData from 'form-data';
-import fetch from 'electron-fetch';
 import jwtDecode from 'jwt-decode';
 import promiseIpc from 'electron-promise-ipc';
 import keytar from 'keytar';
 import { createHash, randomBytes } from 'crypto';
 import { BrowserWindow } from 'electron';
 import { User, TokenResponse } from 'capacitor-msal';
+import { default as fetch, Response } from 'electron-fetch';
+
+// TODO: Add Logging
 
 const keytarService = 'com.secure911.gatekeeper';
 const keytarAccount = os.userInfo().username;
@@ -33,6 +35,13 @@ interface MsalOptions {
 	redirectUri: string;
 	clientId: string;
 	scopes: string[];
+}
+
+export class AuthError extends Error {
+	constructor(errorResponse: any) {
+		super(errorResponse.error_description);
+		Object.assign(this, errorResponse);
+	}
 }
 
 export class CapacitorMsal {
@@ -79,7 +88,7 @@ export class CapacitorMsal {
 		const state = random();
 		const codeVerifier = random();
 		const challenge = codeChallenge(codeVerifier);
-		
+
 		// Build the authorization URL.
 		const authorizeUrl = new URL(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/authorize`);
 		const authParams = new URLSearchParams({
@@ -93,7 +102,7 @@ export class CapacitorMsal {
 			code_challenge: challenge
 		});
 		authorizeUrl.search = authParams.toString();
-		
+
 		// Open the user's browser to the sign-in page.
 		const redirectUrl = await new Promise<URL>(resolve => {
 			const window = new BrowserWindow({
@@ -120,11 +129,25 @@ export class CapacitorMsal {
 			});
 		});
 
-		// TODO: Add error handling
+		if (redirectUrl.searchParams.has('error')) {
+			throw new AuthError({
+				error: redirectUrl.searchParams.get('error'),
+				error_description: redirectUrl.searchParams.get('error_description')
+			});
+		}
+
+		const responseState = redirectUrl.searchParams.get('state');
+		if (state !== responseState) {
+			throw new AuthError({
+				error: 'INVALID_STATE',
+				error_description: 'The response state does not match the request state.'
+			})
+		}
+
 		// TODO: Add validation
 
 		// Exchange the authorization code for a set of tokens.
-		const res = await fetch(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/token`, {
+		const response = await fetch(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/token`, {
 			method: 'POST',
 			body: buildFormData({
 				client_id: this.options.clientId,
@@ -135,14 +158,7 @@ export class CapacitorMsal {
 				code_verifier: codeVerifier
 			})
 		});
-		// TODO: Add error handling
-		this.tokens = await res.json<TokenResponse>();
-		
-		// Compute when the tokens will expire.
-		this.tokensExpireAt = new Date(Date.now() + (1000 * this.tokens.expires_in));
-		
-		// Store the refresh token to login silently.
-		keytar.setPassword(keytarService, keytarAccount, this.tokens.refresh_token);
+		await this.processTokenResponse(response);
 	}
 
 	private async refreshTokens() {
@@ -152,7 +168,7 @@ export class CapacitorMsal {
 		const refreshToken = await keytar.getPassword(keytarService, keytarAccount);
 		// TODO: Handle no available token.
 
-		const res = await fetch(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/token`, {
+		const response = await fetch(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/token`, {
 			method: 'POST',
 			body: buildFormData({
 				client_id: this.options.clientId,
@@ -161,9 +177,12 @@ export class CapacitorMsal {
 				refresh_token: refreshToken
 			})
 		});
+		await this.processTokenResponse(response);
+	}
 
+	private async processTokenResponse(response: Response) {
 		// TODO: Add error handling
-		this.tokens = await res.json<TokenResponse>();
+		this.tokens = await response.json();
 
 		// Compute when the tokens will expire.
 		this.tokensExpireAt = new Date(Date.now() + (1000 * this.tokens.expires_in));
