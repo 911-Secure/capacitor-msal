@@ -22,10 +22,10 @@ function codeChallenge(codeVerifier: string): string {
 }
 
 function buildFormData(obj: any): FormData {
-    return Object.keys(obj).reduce((data, key) => {
-        data.append(key, obj[key]);
-        return data;
-    }, new FormData());
+	return Object.keys(obj).reduce((data, key) => {
+		data.append(key, obj[key]);
+		return data;
+	}, new FormData());
 }
 
 interface MsalOptions {
@@ -39,7 +39,7 @@ export class CapacitorMsal {
 	private tokens: TokenResponse;
 	private tokensExpireAt: Date;
 
-	constructor(private window: BrowserWindow, private options?: MsalOptions) { 
+	constructor(private window: BrowserWindow, private options?: MsalOptions) {
 		// Read the config file, if it exists.
 		let capConfig: MsalOptions;
 		try {
@@ -57,11 +57,29 @@ export class CapacitorMsal {
 	}
 
 	private async login(): Promise<User> {
+		try {
+			// Attempt to log in silently.
+			await this.refreshTokens();
+		} catch (error) {
+			// Silent login failed. Try again interactively.
+			await this.loginInteractive();
+		}
+
+		// TODO: Add validation
+		return jwtDecode<User>(this.tokens.id_token);
+	}
+
+	private async acquireToken(): Promise<TokenResponse> {
+		await this.refreshTokens();
+		return this.tokens;
+	}
+
+	private async loginInteractive() {
 		// Generate the nonces used by OAuth.
 		const state = random();
 		const codeVerifier = random();
 		const challenge = codeChallenge(codeVerifier);
-
+		
 		// Build the authorization URL.
 		const authorizeUrl = new URL(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/authorize`);
 		const authParams = new URLSearchParams({
@@ -77,7 +95,30 @@ export class CapacitorMsal {
 		authorizeUrl.search = authParams.toString();
 		
 		// Open the user's browser to the sign-in page.
-		const redirectUrl = await this.loginWithPopup(authorizeUrl);
+		const redirectUrl = await new Promise<URL>(resolve => {
+			const window = new BrowserWindow({
+				width: 1000,
+				height: 600,
+				show: false,
+				parent: this.window,
+				modal: true,
+				webPreferences: {
+					nodeIntegration: false
+				}
+			});
+
+			window.loadURL(authorizeUrl.href);
+
+			window.on('ready-to-show', () => {
+				window.show();
+			});
+
+			window.webContents.on('will-redirect', (event, url) => {
+				event.preventDefault();
+				window.close();
+				resolve(new URL(url));
+			});
+		});
 
 		// TODO: Add error handling
 		// TODO: Add validation
@@ -94,74 +135,40 @@ export class CapacitorMsal {
 				code_verifier: codeVerifier
 			})
 		});
-		const response = await res.json<TokenResponse>();
+		// TODO: Add error handling
+		this.tokens = await res.json<TokenResponse>();
+		
+		// Compute when the tokens will expire.
+		this.tokensExpireAt = new Date(Date.now() + (1000 * this.tokens.expires_in));
+		
+		// Store the refresh token to login silently.
+		keytar.setPassword(keytarService, keytarAccount, this.tokens.refresh_token);
+	}
+
+	private async refreshTokens() {
+		// No action needed if the tokens have not expired.
+		if (this.tokensExpireAt > new Date()) return;
+
+		const refreshToken = await keytar.getPassword(keytarService, keytarAccount);
+		// TODO: Handle no available token.
+
+		const res = await fetch(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/token`, {
+			method: 'POST',
+			body: buildFormData({
+				client_id: this.options.clientId,
+				grant_type: 'refresh_token',
+				scope: this.options.scopes.join(' '),
+				refresh_token: refreshToken
+			})
+		});
 
 		// TODO: Add error handling
-
-		this.tokens = response;
+		this.tokens = await res.json<TokenResponse>();
 
 		// Compute when the tokens will expire.
 		this.tokensExpireAt = new Date(Date.now() + (1000 * this.tokens.expires_in));
-
+		
 		// Store the refresh token to login silently.
 		keytar.setPassword(keytarService, keytarAccount, this.tokens.refresh_token);
-
-		// TODO: Add validation
-		return jwtDecode<User>(this.tokens.id_token);
-	}
-
-	private async acquireToken(): Promise<TokenResponse> {
-		if (this.tokensExpireAt <= new Date()) {
-			const refreshToken = await keytar.getPassword(keytarService, keytarAccount);
-			// TODO: Handle no available token.
-
-			const res = await fetch(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/token`, {
-				method: 'POST',
-				body: buildFormData({
-					client_id: this.options.clientId,
-					grant_type: 'refresh_token',
-					scope: this.options.scopes.join(' '),
-					refresh_token: refreshToken
-				})
-			});
-			// TODO: Add error handling
-
-			this.tokens = await res.json<TokenResponse>();
-
-			// Compute when the tokens will expire.
-			this.tokensExpireAt = new Date(Date.now() + (1000 * this.tokens.expires_in));
-
-			// Store the refresh token to login silently.
-			keytar.setPassword(keytarService, keytarAccount, this.tokens.refresh_token);
-		}
-
-		return this.tokens;
-	}
-
-	private async loginWithPopup(authorizeUrl: URL): Promise<URL> {
-		return new Promise<URL>(resolve => {
-			const window = new BrowserWindow({
-				width: 1000,
-				height: 600,
-				show: false,
-				parent: this.window,
-				modal: true,
-				webPreferences: {
-					nodeIntegration: false
-				}
-			});
-			
-			window.loadURL(authorizeUrl.href);
-			
-			window.on('ready-to-show', () => {
-				window.show();
-			});
-			
-			window.webContents.on('will-redirect', (event, url) => {
-				event.preventDefault();
-				window.close();
-				resolve(new URL(url));
-			});
-		});
 	}
 }
