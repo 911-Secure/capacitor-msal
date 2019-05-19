@@ -30,10 +30,12 @@ function buildFormData(obj: any): FormData {
 }
 
 interface MsalOptions {
-	tenant: string;
-	redirectUri: string;
-	clientId: string;
-	scopes: string[];
+	window?: BrowserWindow;
+	logger?: Logger | null;
+	tenant?: string;
+	redirectUri?: string;
+	clientId?: string;
+	scopes?: string[];
 }
 
 export class AuthError extends Error {
@@ -44,11 +46,12 @@ export class AuthError extends Error {
 }
 
 export class CapacitorMsal {
-	private _logger: Logger = console;
+	private options: MsalOptions;
+	private logger: Logger;
 	private tokens: TokenResponse;
 	private tokensExpireAt: Date;
 
-	constructor(private window: BrowserWindow, private options?: MsalOptions) {
+	init(options?: MsalOptions) {
 		// Read the config file, if it exists.
 		let capConfig: MsalOptions;
 		try {
@@ -59,19 +62,17 @@ export class CapacitorMsal {
 		}
 
 		// Copy the options to an internal object.
-		this.options = Object.assign({}, capConfig, options);
+		// Defaults <-- Configuration File <-- In-memory Options.
+		this.options = Object.assign({
+			logger: console
+		}, capConfig, options);
+
+		// Replace null loggers with the NoOpLogger.
+		this.logger = this.options.logger || new NoOpLogger();
 
 		this.logger.debug('MSAL - Registering IPC event handlers')
 		promiseIpc.on('capacitor-msal-login', () => this.login());
 		promiseIpc.on('capacitor-msal-acquire-token', () => this.acquireToken());
-	}
-
-	get logger(): Logger {
-		return this._logger;
-	}
-
-	set logger(value: Logger) {
-		this._logger = value || new NoOpLogger();
 	}
 
 	private async login(): Promise<User> {
@@ -120,8 +121,8 @@ export class CapacitorMsal {
 				width: 1000,
 				height: 600,
 				show: false,
-				parent: this.window,
-				modal: true,
+				parent: this.options.window,
+				modal: !!this.options.window,
 				webPreferences: {
 					nodeIntegration: false
 				}
@@ -219,3 +220,5 @@ export class CapacitorMsal {
 		keytar.setPassword(keytarService, keytarAccount, this.tokens.refresh_token);
 	}
 }
+
+export default new CapacitorMsal();
