@@ -52,23 +52,19 @@ export class CapacitorMsal {
 	private tokensExpireAt: Date;
 
 	init(options?: MsalOptions) {
-		// Read the config file, if it exists.
-		let capConfig: MsalOptions;
-		try {
-			const file = fs.readFileSync('./capacitor.config.json', 'utf-8');
-			capConfig = JSON.parse(file).plugins.Msal;
-		} catch (error) {
-			this.logger.warn('MSAL - Unable to read MSAL configuration from capacitor.config.json', error);
-		}
-
-		// Copy the options to an internal object.
-		// Defaults <-- Configuration File <-- In-memory Options.
-		this.options = Object.assign({
-			logger: console
-		}, capConfig, options);
+		this.options = Object.assign({ logger: console }, options);
 
 		// Replace null loggers with the NoOpLogger.
 		this.logger = this.options.logger || new NoOpLogger();
+
+		// Read the config file, if it exists.
+		try {
+			const file = fs.readFileSync('./capacitor.config.json', 'utf-8');
+			const capConfig = JSON.parse(file).plugins.Msal;
+			Object.assign(this.options, capConfig);
+		} catch (error) {
+			this.logger.warn('MSAL - Unable to read MSAL configuration from capacitor.config.json', error);
+		}
 
 		this.logger.debug('MSAL - Registering IPC event handlers')
 		promiseIpc.on('capacitor-msal-login', () => this.login());
@@ -189,7 +185,7 @@ export class CapacitorMsal {
 				error_description: 'There is no refresh token available.'
 			});
 		}
-		
+
 		this.logger.info('MSAL - Refreshing user access tokens');
 		const response = await fetch(`https://login.microsoftonline.com/${this.options.tenant}/oauth2/v2.0/token`, {
 			method: 'POST',
@@ -214,7 +210,7 @@ export class CapacitorMsal {
 
 		// Compute when the tokens will expire.
 		this.tokensExpireAt = new Date(Date.now() + (1000 * this.tokens.expires_in));
-		
+
 		// Store the refresh token to login silently.
 		this.logger.debug('MSAL - Saving refresh token');
 		keytar.setPassword(keytarService, keytarAccount, this.tokens.refresh_token);
