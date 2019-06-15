@@ -16,7 +16,8 @@
   "author": "911 Secure",
   "license": "MIT",
   "dependencies": {
-    "@capacitor/core": "^1.0.0"
+    "@capacitor/core": "^1.0.0",
+    "msal": "^1.0.1"
   },
   "devDependencies": {
     "@capacitor/android": "^1.0.0",

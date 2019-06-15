@@ -1,24 +1,20 @@
 import { WebPlugin } from '@capacitor/core';
-import { MsalPlugin, User, TokenResponse } from './definitions';
+import { Configuration, UserAgentApplication } from 'msal';
+import { MsalPlugin } from './definitions';
 
 export class MsalWeb extends WebPlugin implements MsalPlugin {
+	msalInstance: UserAgentApplication;
+
 	constructor() {
 		super({
 			name: 'Msal',
 			platforms: ['web']
 		});
 	}
-
-	get user(): User {
-		throw new Error("Method not implemented.");
-	}
-
-	login(): Promise<User> {
-		throw new Error("Method not implemented.");
-	}
-
-	acquireToken(): Promise<TokenResponse> {
-		throw new Error("Method not implemented.");
+	
+	init(options: Configuration): Promise<void> {
+		this.msalInstance = new UserAgentApplication(options);
+		return Promise.resolve();
 	}
 }
 

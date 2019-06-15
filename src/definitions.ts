@@ -1,3 +1,5 @@
+import { Configuration } from 'msal';
+
 declare module "@capacitor/core" {
 	interface PluginRegistry {
 		Msal?: MsalPlugin;
@@ -5,9 +7,7 @@ declare module "@capacitor/core" {
 }
 
 export interface MsalPlugin {
-	readonly user: User;
-	login(): Promise<User>;
-	acquireToken(): Promise<TokenResponse>;
+	init(options: Configuration): Promise<void>;
 }
 
 export interface TokenResponse {
