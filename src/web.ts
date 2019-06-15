@@ -1,5 +1,5 @@
 import { WebPlugin } from '@capacitor/core';
-import { Configuration, UserAgentApplication } from 'msal';
+import { Configuration, UserAgentApplication, AuthenticationParameters, AuthResponse } from 'msal';
 import { MsalPlugin } from './definitions';
 
 export class MsalWeb extends WebPlugin implements MsalPlugin {
@@ -15,6 +15,10 @@ export class MsalWeb extends WebPlugin implements MsalPlugin {
 	init(options: Configuration): Promise<void> {
 		this.msalInstance = new UserAgentApplication(options);
 		return Promise.resolve();
+	}
+
+	login(request?: AuthenticationParameters): Promise<AuthResponse> {
+		return this.msalInstance.loginPopup(request);
 	}
 }
 

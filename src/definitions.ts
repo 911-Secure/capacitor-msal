@@ -1,4 +1,4 @@
-import { Configuration } from 'msal';
+import { Configuration, AuthenticationParameters, AuthResponse } from 'msal';
 
 declare module "@capacitor/core" {
 	interface PluginRegistry {
@@ -8,6 +8,7 @@ declare module "@capacitor/core" {
 
 export interface MsalPlugin {
 	init(options: Configuration): Promise<void>;
+	login(request?: AuthenticationParameters): Promise<AuthResponse>;
 }
 
 export interface TokenResponse {
