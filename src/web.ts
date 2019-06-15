@@ -20,6 +20,14 @@ export class MsalWeb extends WebPlugin implements MsalPlugin {
 	login(request?: AuthenticationParameters): Promise<AuthResponse> {
 		return this.msalInstance.loginPopup(request);
 	}
+
+	acquireTokenSilent(request: AuthenticationParameters): Promise<AuthResponse> {
+		return this.msalInstance.acquireTokenSilent(request);
+	}
+
+	acquireTokenInteractive(request: AuthenticationParameters): Promise<AuthResponse> {
+		return this.msalInstance.acquireTokenPopup(request);
+	}
 }
 
 const Msal = new MsalWeb();
