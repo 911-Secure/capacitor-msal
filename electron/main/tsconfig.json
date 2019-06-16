@@ -7,6 +7,7 @@
 	},
 	"files": [
 		"index.ts",
-		"../electron-promise-ipc.d.ts"
+		"../electron-promise-ipc.d.ts",
+		"../definitions.ts"
 	]
 }
