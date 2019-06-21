@@ -11,7 +11,7 @@ export class CapacitorMsal {
 	constructor() {
 		promiseIpc.on('msal-init', options => this.init(options));
 		promiseIpc.on('msal-login', (redirectUri, request) => this.login(redirectUri, request));
-		promiseIpc.on('msal-acquire-token-silent', (redirectUri, request) => this.acquireTokenSilent(redirectUri, request));
+		promiseIpc.on('msal-acquire-token', (redirectUri, request) => this.acquireToken(redirectUri, request));
 	}
 
 	public async init(options: Configuration): Promise<void> {
@@ -43,7 +43,7 @@ export class CapacitorMsal {
 		return cached;
 	}
 
-	public async acquireTokenSilent(redirectUri: string, request: AuthenticationParameters): Promise<TokenSet> {
+	public async acquireToken(redirectUri: string, request: AuthenticationParameters): Promise<TokenSet> {
 		const requestScopes = [
 			...(request.scopes || []),
 			...(request.extraScopesToConsent || [])

@@ -17,11 +17,7 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		});
 	}
 
-	private getRedirectUri(uri: string | (() => string)): string {
-		return typeof uri === 'function' ? uri() : uri;
-	}
-
-	init(options: Configuration): Promise<void> {
+	public init(options: Configuration): Promise<void> {
 		// The following defaults come from the MSDN documentation.
 		// https://docs.microsoft.com/en-us/azure/active-directory/develop/msal-js-initializing-client-applications
 		options = Object.assign<Configuration, Configuration>({
@@ -51,15 +47,15 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		this.postLogoutRedirectUri = options.auth.postLogoutRedirectUri;
 
 		// Normalize the redirect URI for serialization.
-		options.auth.redirectUri = this.getRedirectUri(this.redirectUri);
-		options.auth.postLogoutRedirectUri = this.getRedirectUri(this.postLogoutRedirectUri);
+		options.auth.redirectUri = this.getRedirectUri();
+		options.auth.postLogoutRedirectUri = this.getPostLogoutRedirectUri();
 
 		return promiseIpc.send('msal-init', options);
 	}
 
-	async login(request?: AuthenticationParameters): Promise<AuthResponse> {
+	public async login(request?: AuthenticationParameters): Promise<AuthResponse> {
 		try {
-			const redirectUri = this.getRedirectUri(this.redirectUri);
+			const redirectUri = this.getRedirectUri();
 			const tokens: TokenSet =
 				await promiseIpc.send('msal-login', redirectUri, request);
 			return this.buildResponse(tokens, request);
@@ -69,11 +65,16 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		}
 	}
 
-	async acquireTokenSilent(request: AuthenticationParameters): Promise<AuthResponse> {
+	public acquireTokenSilent(request: AuthenticationParameters): Promise<AuthResponse> {
+		request.prompt = 'none';
+		return this.acquireTokenInteractive(request);
+	}
+
+	public async acquireTokenInteractive(request: AuthenticationParameters): Promise<AuthResponse> {
 		try {
-			const redirectUri = this.getRedirectUri(this.redirectUri);
+			const redirectUri = this.getRedirectUri();
 			const tokens: TokenSet =
-				await promiseIpc.send('msal-acquire-token-silent', redirectUri, request);
+				await promiseIpc.send('msal-acquire-token', redirectUri, request);
 			return this.buildResponse(tokens, request);
 		} catch (e) {
 			// TODO: Build the appropriate sub-class.
@@ -81,8 +82,16 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		}
 	}
 
-	acquireTokenInteractive(_request: AuthenticationParameters): Promise<AuthResponse> {
-		throw new Error("Method not implemented.");
+	private getRedirectUri(): string {
+		return typeof this.redirectUri === 'function'
+			? this.redirectUri()
+			: this.redirectUri;
+	}
+
+	private getPostLogoutRedirectUri(): string {
+		return typeof this.postLogoutRedirectUri === 'function'
+			? this.postLogoutRedirectUri()
+			: this.postLogoutRedirectUri;
 	}
 
 	private buildResponse(tokens: TokenSet, request: AuthenticationParameters): AuthResponse {
