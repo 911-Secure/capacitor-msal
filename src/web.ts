@@ -1,4 +1,4 @@
-import { WebPlugin } from '@capacitor/core';
+import { WebPlugin, registerWebPlugin } from '@capacitor/core';
 import { Configuration, UserAgentApplication, AuthenticationParameters, AuthResponse } from 'msal';
 import { MsalPlugin } from './definitions';
 
@@ -31,5 +31,6 @@ export class MsalWeb extends WebPlugin implements MsalPlugin {
 }
 
 const Msal = new MsalWeb();
+registerWebPlugin(Msal);
 
 export { Msal };
