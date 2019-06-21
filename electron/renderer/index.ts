@@ -1,5 +1,6 @@
 import promiseIpc from 'electron-promise-ipc';
 import { WebPlugin } from '@capacitor/core';
+import { registerElectronPlugin } from '@capacitor/electron/dist/esm';
 import { Configuration, AuthenticationParameters, AuthResponse, Account, AuthError } from 'msal';
 import { ClientInfo } from 'msal/lib-commonjs/ClientInfo';
 import { IdToken } from 'msal/lib-commonjs/IdToken';
@@ -111,5 +112,6 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 }
 
 const Msal = new MsalElectron();
+registerElectronPlugin(Msal);
 
 export { Msal };
