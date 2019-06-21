@@ -1,3 +1,4 @@
+import keytar from 'keytar';
 import promiseIpc from 'electron-promise-ipc';
 import { BrowserWindow } from 'electron';
 import { Configuration, AuthenticationParameters } from 'msal';
@@ -5,13 +6,16 @@ import { Issuer, Client, generators, TokenSet } from 'openid-client';
 
 export class CapacitorMsal {
 	private client: Client;
+	private cache: TokenCache;
 
 	constructor() {
 		promiseIpc.on('msal-init', options => this.init(options));
 		promiseIpc.on('msal-login', (redirectUri, request) => this.login(redirectUri, request));
 	}
 
-	async init(options: Configuration): Promise<void> {
+	public async init(options: Configuration): Promise<void> {
+		this.cache = new TokenCache(`msal-${options.auth.clientId}`);
+
 		const issuer = await Issuer.discover(options.auth.authority);
 		this.client = new issuer.Client({
 			client_id: options.auth.clientId,
@@ -20,16 +24,26 @@ export class CapacitorMsal {
 		});
 	}
 
-	async login(redirectUri: string, request?: AuthenticationParameters): Promise<TokenSet> {
+	public async login(redirectUri: string, request?: AuthenticationParameters): Promise<TokenSet> {
+		const requestScopes = [...(request.scopes || []), ...(request.extraScopesToConsent || [])];
+
+		const cached = await this.cache.getToken(requestScopes);
+		const tokens = typeof cached === 'string'
+			? await this.client.refresh(cached, { exchangeBody: { scope: requestScopes.join(' ') } })
+			: await this.loginPopup(redirectUri, requestScopes, request);
+
+		this.cache.setToken(tokens);
+		
+		return tokens;
+	}
+
+	private async loginPopup(redirectUri: string, requestScopes: string[], request: AuthenticationParameters): Promise<TokenSet> {
 		const verifier = generators.codeVerifier();
 		const challenge = generators.codeChallenge(verifier);
 
-		const scopes = request.scopes || [];
-		const extraScopes = request.extraScopesToConsent || [];
-
 		const authorizeUrl = this.client.authorizationUrl({
 			redirect_uri: redirectUri,
-			scope: [...scopes, ...extraScopes].join(' '),
+			scope: requestScopes.join(' '),
 			response_mode: 'query',
 			prompt: request.prompt,
 			login_hint: request.loginHint,
@@ -37,11 +51,10 @@ export class CapacitorMsal {
 			code_challenge_method: 'S256',
 			code_challenge: challenge
 		});
-		
+
 		// Login using a popup.
 		const responseUrl = await new Promise<string>((resolve, reject) => {
 			let receivedResponse = false;
-
 			const window = new BrowserWindow({
 				width: 1000,
 				height: 600,
@@ -49,13 +62,11 @@ export class CapacitorMsal {
 				// TODO: Make this window a modal
 			});
 			window.loadURL(authorizeUrl);
-			window.on('ready-to-show', () => window.show());
 			window.on('closed', () => {
 				if (!receivedResponse) {
 					reject({ error: 'user_cancelled' });
 				}
 			});
-
 			window.webContents.on('will-redirect', (_event, url) => {
 				receivedResponse = true;
 				window.close();
@@ -69,8 +80,44 @@ export class CapacitorMsal {
 			code_verifier: verifier
 		});
 
-		// TODO: Save refresh token
-
 		return tokens;
+	}
+}
+
+class TokenCache {
+	private tokens = new Map<string, TokenSet>();
+
+	constructor(private keytarService: string) { }
+
+	public async getToken(requestScopes: string[]): Promise<TokenSet | string | undefined> {
+		for (const [scope, tokens] of this.tokens.entries()) {
+			const tokenScopes = scope.split(' ');
+			
+			if (tokens.expired()) {
+				this.tokens.delete(scope);
+			}
+
+			if (requestScopes.every(scope => tokenScopes.includes(scope))) {
+				return tokens;
+			}
+		}
+
+		const refreshTokens = await keytar.findCredentials(this.keytarService);
+		const refreshToken = refreshTokens.find(token => {
+			const tokenScopes = token.account.split(' ');
+			return requestScopes.every(scope => tokenScopes.includes(scope));
+		});
+
+		return refreshToken && refreshToken.password;
+	}
+
+	public async setToken(tokens: TokenSet): Promise<void> {
+		// Save the tokens in memory.
+		this.tokens.set(tokens.scope, tokens);
+
+		// Save the refresh token (if available) in the OS keychain.
+		if (tokens.refresh_token) {
+			await keytar.setPassword(this.keytarService, tokens.scope, tokens.refresh_token);
+		}
 	}
 }
