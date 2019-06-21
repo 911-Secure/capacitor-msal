@@ -11,6 +11,7 @@ export class CapacitorMsal {
 	constructor() {
 		promiseIpc.on('msal-init', options => this.init(options));
 		promiseIpc.on('msal-login', (redirectUri, request) => this.login(redirectUri, request));
+		promiseIpc.on('msal-acquire-token-silent', (redirectUri, request) => this.acquireTokenSilent(redirectUri, request));
 	}
 
 	public async init(options: Configuration): Promise<void> {
@@ -25,19 +26,43 @@ export class CapacitorMsal {
 	}
 
 	public async login(redirectUri: string, request?: AuthenticationParameters): Promise<TokenSet> {
-		const requestScopes = [...(request.scopes || []), ...(request.extraScopesToConsent || [])];
-
+		const requestScopes = [
+			...(request && request.scopes || []),
+			...(request && request.extraScopesToConsent || [])
+		];
 		const cached = await this.cache.getToken(requestScopes);
-		const tokens = typeof cached === 'string'
-			? await this.client.refresh(cached, { exchangeBody: { scope: requestScopes.join(' ') } })
-			: await this.loginPopup(redirectUri, requestScopes, request);
 
-		this.cache.setToken(tokens);
-		
-		return tokens;
+		if (!cached) {
+			return await this.loginPopup(redirectUri, requestScopes, request);
+		}
+
+		if (typeof cached === 'string') {
+			return await this.refresh(cached, requestScopes);
+		}
+
+		return cached;
 	}
 
-	private async loginPopup(redirectUri: string, requestScopes: string[], request: AuthenticationParameters): Promise<TokenSet> {
+	public async acquireTokenSilent(redirectUri: string, request: AuthenticationParameters): Promise<TokenSet> {
+		const requestScopes = [
+			...(request.scopes || []),
+			...(request.extraScopesToConsent || [])
+		];
+		const cached = await this.cache.getToken(requestScopes);
+
+		if (!cached) {
+			request.prompt = 'none';
+			return await this.loginPopup(redirectUri, requestScopes, request);
+		}
+
+		if (typeof cached === 'string') {
+			return await this.refresh(cached, requestScopes);
+		}
+
+		return cached;
+	}
+
+	private async loginPopup(redirectUri: string, requestScopes: string[], request?: AuthenticationParameters): Promise<TokenSet> {
 		const verifier = generators.codeVerifier();
 		const challenge = generators.codeChallenge(verifier);
 
@@ -45,8 +70,8 @@ export class CapacitorMsal {
 			redirect_uri: redirectUri,
 			scope: requestScopes.join(' '),
 			response_mode: 'query',
-			prompt: request.prompt,
-			login_hint: request.loginHint,
+			prompt: request && request.prompt,
+			login_hint: request && request.loginHint,
 			// TODO: domain_hint,
 			code_challenge_method: 'S256',
 			code_challenge: challenge
@@ -55,23 +80,34 @@ export class CapacitorMsal {
 		// Login using a popup.
 		const responseUrl = await new Promise<string>((resolve, reject) => {
 			let receivedResponse = false;
+
 			const window = new BrowserWindow({
 				width: 1000,
 				height: 600,
 				show: false
 				// TODO: Make this window a modal
 			});
-			window.loadURL(authorizeUrl);
+
+			if (request.prompt !== 'none') {
+				window.on('ready-to-show', () => window.show());
+			}
+			
 			window.on('closed', () => {
 				if (!receivedResponse) {
-					reject({ error: 'user_cancelled' });
+					reject({ 
+						error: 'user_cancelled',
+						error_description: 'User cancelled the flow.'
+					});
 				}
 			});
+			
 			window.webContents.on('will-redirect', (_event, url) => {
 				receivedResponse = true;
 				window.close();
 				resolve(url);
 			});
+
+			window.loadURL(authorizeUrl);
 		});
 
 		const params = this.client.callbackParams(responseUrl);
@@ -80,6 +116,13 @@ export class CapacitorMsal {
 			code_verifier: verifier
 		});
 
+		this.cache.setToken(tokens);
+		return tokens;
+	}
+
+	private async refresh(refreshToken: string, requestScopes: string[]) {
+		const tokens = await this.client.refresh(refreshToken, { exchangeBody: { scope: requestScopes.join(' ') } });
+		this.cache.setToken(tokens);
 		return tokens;
 	}
 }
@@ -92,7 +135,7 @@ class TokenCache {
 	public async getToken(requestScopes: string[]): Promise<TokenSet | string | undefined> {
 		for (const [scope, tokens] of this.tokens.entries()) {
 			const tokenScopes = scope.split(' ');
-			
+
 			if (tokens.expired()) {
 				this.tokens.delete(scope);
 			}

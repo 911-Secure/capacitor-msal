@@ -1,6 +1,6 @@
 import promiseIpc from 'electron-promise-ipc';
 import { WebPlugin } from '@capacitor/core';
-import { Configuration, AuthenticationParameters, AuthResponse, ClientAuthError, Account } from 'msal';
+import { Configuration, AuthenticationParameters, AuthResponse, Account, AuthError } from 'msal';
 import { ClientInfo } from 'msal/lib-commonjs/ClientInfo';
 import { IdToken } from 'msal/lib-commonjs/IdToken';
 import { MsalPlugin } from 'capacitor-msal';
@@ -58,42 +58,46 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 	}
 
 	async login(request?: AuthenticationParameters): Promise<AuthResponse> {
-		// The Electron main process will be used to control the popup window,
-		// capture its redirect, and exchange the code for a token.
-		// The Window APIs are cleaner there, and Azure AD does not support CORS.
-		// Responses and errors are handled in the renderer to preserve class info.
 		try {
+			const redirectUri = this.getRedirectUri(this.redirectUri);
 			const tokens: TokenSet =
-				await promiseIpc.send('msal-login', this.getRedirectUri(this.redirectUri), request);
-
-			const idToken = new IdToken(tokens.id_token);
-			return {
-				uniqueId: idToken.objectId || idToken.subject,
-				tenantId: idToken.tenantId,
-				tokenType: tokens.token_type,
-				idToken: idToken,
-				accessToken: tokens.access_token,
-				scopes: tokens.scope.split(' '),
-				expiresOn: new Date(Date.now() + tokens.expires_in * 1000),
-				account: Account.createAccount(idToken, new ClientInfo(tokens.client_info)),
-				accountState: request.state
-			};
+				await promiseIpc.send('msal-login', redirectUri, request);
+			return this.buildResponse(tokens, request);
 		} catch (e) {
-			if (e.error === 'user_cancelled') {
-				throw ClientAuthError.createUserCancelledError();
-			}
-
-			// TODO: Handle openid-client errors
-			throw e;
+			// TODO: Build the appropriate sub-class.
+			throw new AuthError(e.error, e.error_description);
 		}
 	}
 
-	acquireTokenSilent(_request: AuthenticationParameters): Promise<AuthResponse> {
-		throw new Error("Method not implemented.");
+	async acquireTokenSilent(request: AuthenticationParameters): Promise<AuthResponse> {
+		try {
+			const redirectUri = this.getRedirectUri(this.redirectUri);
+			const tokens: TokenSet =
+				await promiseIpc.send('msal-acquire-token-silent', redirectUri, request);
+			return this.buildResponse(tokens, request);
+		} catch (e) {
+			// TODO: Build the appropriate sub-class.
+			throw new AuthError(e.error, e.error_description);
+		}
 	}
 
 	acquireTokenInteractive(_request: AuthenticationParameters): Promise<AuthResponse> {
 		throw new Error("Method not implemented.");
+	}
+
+	private buildResponse(tokens: TokenSet, request: AuthenticationParameters): AuthResponse {
+		const idToken = new IdToken(tokens.id_token);
+		return {
+			uniqueId: idToken.objectId || idToken.subject,
+			tenantId: idToken.tenantId,
+			tokenType: tokens.token_type,
+			idToken: idToken,
+			accessToken: tokens.access_token,
+			scopes: tokens.scope.split(' '),
+			expiresOn: new Date(Date.now() + tokens.expires_in * 1000),
+			account: Account.createAccount(idToken, new ClientInfo(tokens.client_info)),
+			accountState: request.state
+		};
 	}
 }
 
