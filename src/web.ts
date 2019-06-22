@@ -1,8 +1,8 @@
 import { WebPlugin, registerWebPlugin } from '@capacitor/core';
-import { Configuration, UserAgentApplication, AuthenticationParameters, AuthResponse } from 'msal';
+import { Configuration, UserAgentApplication, AuthenticationParameters, AuthResponse, Account } from 'msal';
 import { MsalPlugin } from './definitions';
 
-export class MsalWeb extends WebPlugin implements MsalPlugin {
+class MsalWeb extends WebPlugin implements MsalPlugin {
 	msalInstance: UserAgentApplication;
 
 	constructor() {
@@ -28,9 +28,15 @@ export class MsalWeb extends WebPlugin implements MsalPlugin {
 	acquireTokenInteractive(request: AuthenticationParameters): Promise<AuthResponse> {
 		return this.msalInstance.acquireTokenPopup(request);
 	}
+
+	getLoginInProgress(): boolean {
+		return this.msalInstance.getLoginInProgress();
+	}
+
+	getAccount(): Account {
+		return this.msalInstance.getAccount();
+	}
 }
 
 const Msal = new MsalWeb();
 registerWebPlugin(Msal);
-
-export { Msal };

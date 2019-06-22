@@ -1,5 +1,5 @@
-import { Configuration, AuthenticationParameters, AuthResponse } from 'msal';
-export { Configuration, AuthenticationParameters, AuthResponse } from 'msal';
+import { Configuration, AuthenticationParameters, AuthResponse, Account } from 'msal';
+export { Configuration, AuthenticationParameters, AuthResponse, Account } from 'msal';
 
 declare module "@capacitor/core/dist/esm/core-plugin-definitions" {
 	interface PluginRegistry {
@@ -12,4 +12,6 @@ export interface MsalPlugin {
 	login(request?: AuthenticationParameters): Promise<AuthResponse>;
 	acquireTokenSilent(request: AuthenticationParameters): Promise<AuthResponse>;
 	acquireTokenInteractive(request: AuthenticationParameters): Promise<AuthResponse>;
+	getLoginInProgress(): boolean;
+	getAccount(): Account;
 }
