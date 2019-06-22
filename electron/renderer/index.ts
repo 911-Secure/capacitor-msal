@@ -10,6 +10,8 @@ import { TokenSet } from 'openid-client';
 export class MsalElectron extends WebPlugin implements MsalPlugin {
 	private redirectUri: string | (() => string);
 	private postLogoutRedirectUri: string | (() => string);
+	private account: Account;
+	private loginInProgress = false;
 
 	constructor() {
 		super({
@@ -55,14 +57,21 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 	}
 
 	public async login(request?: AuthenticationParameters): Promise<AuthResponse> {
+		this.loginInProgress = true;
 		try {
 			const redirectUri = this.getRedirectUri();
 			const tokens: TokenSet =
 				await promiseIpc.send('msal-login', redirectUri, request);
-			return this.buildResponse(tokens, request);
+
+			const response = this.buildResponse(tokens, request);
+			this.account = response.account;
+
+			return response;
 		} catch (e) {
 			// TODO: Build the appropriate sub-class.
 			throw new AuthError(e.error, e.error_description);
+		} finally {
+			this.loginInProgress = false;
 		}
 	}
 
@@ -81,6 +90,14 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 			// TODO: Build the appropriate sub-class.
 			throw new AuthError(e.error, e.error_description);
 		}
+	}
+
+	public getAccount(): Account {
+		return this.account;
+	}
+
+	public getLoginInProgress(): boolean {
+		return this.loginInProgress;
 	}
 
 	private getRedirectUri(): string {
