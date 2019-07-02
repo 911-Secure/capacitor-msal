@@ -15,6 +15,7 @@
   "license": "MIT",
   "dependencies": {
     "@capacitor/core": "^1.1.0",
+    "capacitor-msal-electron": "file:electron",
     "msal": "^1.0.2"
   },
   "devDependencies": {
