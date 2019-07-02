@@ -164,3 +164,5 @@ class TokenCache {
 		}
 	}
 }
+
+export default new CapacitorMsal();
