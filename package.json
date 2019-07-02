@@ -1,6 +1,6 @@
 {
   "name": "capacitor-msal",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "A Capacitor plugin that provides OAuth 2.0 authentication using the Microsoft Authentication Library",
   "main": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -9,13 +9,13 @@
     "build": "tsc --project src",
     "build:electron": "npm run build --prefix=electron",
     "clean": "rm -rf ./dist",
-    "prepare": "run-s build build:electron"
+    "prepare": "run-s build build:electron",
+    "postinstall": "npm install ./electron"
   },
   "author": "911 Secure",
   "license": "MIT",
   "dependencies": {
     "@capacitor/core": "^1.1.0",
-    "capacitor-msal-electron": "file:electron",
     "msal": "^1.0.2"
   },
   "devDependencies": {

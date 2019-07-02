@@ -1,6 +1,6 @@
 module.exports = isRenderer()
-	? require('./main')
-	: require('./renderer');
+	? require('./renderer')
+	: require('./main');
 
 function isRenderer() {
 	// running in a web browser
