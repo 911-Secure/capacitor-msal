@@ -1,3 +1,4 @@
+import fs from 'fs';
 import keytar from 'keytar';
 import promiseIpc from 'electron-promise-ipc';
 import { BrowserWindow } from 'electron';
@@ -15,6 +16,14 @@ export class CapacitorMsal {
 	}
 
 	public async init(options: Configuration): Promise<void> {
+		try {
+			const configFile = fs.readFileSync('./capacitor.config.json', 'utf-8');
+			const config = JSON.parse(configFile);
+			Object.assign(options, config.plugins.Msal);
+		} catch (e) {
+			console.warn('Unable to read Capacitor config file.', e);
+		}
+
 		this.cache = new TokenCache(`msal-${options.auth.clientId}`);
 
 		const issuer = await Issuer.discover(options.auth.authority);
