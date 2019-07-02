@@ -7,8 +7,6 @@ import { TokenSet } from 'openid-client';
 import { MsalPlugin } from './definitions';
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
-	private redirectUri: string | (() => string);
-	private postLogoutRedirectUri: string | (() => string);
 	private account: Account;
 	private loginInProgress = false;
 
@@ -44,23 +42,13 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		if (!options.auth.postLogoutRedirectUri)
 			options.auth.postLogoutRedirectUri = options.auth.redirectUri;
 
-		// Hold the original redirect URIs for later.
-		this.redirectUri = options.auth.redirectUri;
-		this.postLogoutRedirectUri = options.auth.postLogoutRedirectUri;
-
-		// Normalize the redirect URI for serialization.
-		options.auth.redirectUri = this.getRedirectUri();
-		options.auth.postLogoutRedirectUri = this.getPostLogoutRedirectUri();
-
 		return promiseIpc.send('msal-init', options);
 	}
 
 	public async login(request?: AuthenticationParameters): Promise<AuthResponse> {
 		this.loginInProgress = true;
 		try {
-			const redirectUri = this.getRedirectUri();
-			const tokens: TokenSet =
-				await promiseIpc.send('msal-login', redirectUri, request);
+			const tokens: TokenSet = await promiseIpc.send('msal-login', request);
 
 			const response = this.buildResponse(tokens, request);
 			this.account = response.account;
@@ -81,9 +69,7 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 
 	public async acquireTokenInteractive(request: AuthenticationParameters): Promise<AuthResponse> {
 		try {
-			const redirectUri = this.getRedirectUri();
-			const tokens: TokenSet =
-				await promiseIpc.send('msal-acquire-token', redirectUri, request);
+			const tokens: TokenSet = await promiseIpc.send('msal-acquire-token', request);
 			return this.buildResponse(tokens, request);
 		} catch (e) {
 			// TODO: Build the appropriate sub-class.
@@ -97,18 +83,6 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 
 	public getLoginInProgress(): boolean {
 		return this.loginInProgress;
-	}
-
-	private getRedirectUri(): string {
-		return typeof this.redirectUri === 'function'
-			? this.redirectUri()
-			: this.redirectUri;
-	}
-
-	private getPostLogoutRedirectUri(): string {
-		return typeof this.postLogoutRedirectUri === 'function'
-			? this.postLogoutRedirectUri()
-			: this.postLogoutRedirectUri;
 	}
 
 	private buildResponse(tokens: TokenSet, request: AuthenticationParameters): AuthResponse {

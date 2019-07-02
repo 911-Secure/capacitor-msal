@@ -11,15 +11,15 @@ export class CapacitorMsal {
 
 	constructor() {
 		promiseIpc.on('msal-init', options => this.init(options));
-		promiseIpc.on('msal-login', (redirectUri, request) => this.login(redirectUri, request));
-		promiseIpc.on('msal-acquire-token', (redirectUri, request) => this.acquireToken(redirectUri, request));
+		promiseIpc.on('msal-login', request => this.login(request));
+		promiseIpc.on('msal-acquire-token', request => this.acquireToken(request));
 	}
 
 	public async init(options: Configuration): Promise<void> {
 		try {
 			const configFile = fs.readFileSync('./capacitor.config.json', 'utf-8');
 			const config = JSON.parse(configFile);
-			Object.assign(options, config.plugins.Msal);
+			Object.assign(options.auth, config.plugins.Msal);
 		} catch (e) {
 			console.warn('Unable to read Capacitor config file.', e);
 		}
@@ -34,7 +34,7 @@ export class CapacitorMsal {
 		});
 	}
 
-	public async login(redirectUri: string, request?: AuthenticationParameters): Promise<TokenSet> {
+	public async login(request?: AuthenticationParameters): Promise<TokenSet> {
 		const requestScopes = [
 			...(request && request.scopes || []),
 			...(request && request.extraScopesToConsent || [])
@@ -42,7 +42,7 @@ export class CapacitorMsal {
 		const cached = await this.cache.getToken(requestScopes);
 
 		if (!cached) {
-			return await this.loginPopup(redirectUri, requestScopes, request);
+			return await this.loginPopup(requestScopes, request);
 		}
 
 		if (typeof cached === 'string') {
@@ -52,7 +52,7 @@ export class CapacitorMsal {
 		return cached;
 	}
 
-	public async acquireToken(redirectUri: string, request: AuthenticationParameters): Promise<TokenSet> {
+	public async acquireToken(request: AuthenticationParameters): Promise<TokenSet> {
 		const requestScopes = [
 			...(request.scopes || []),
 			...(request.extraScopesToConsent || [])
@@ -61,7 +61,7 @@ export class CapacitorMsal {
 
 		if (!cached) {
 			request.prompt = 'none';
-			return await this.loginPopup(redirectUri, requestScopes, request);
+			return await this.loginPopup(requestScopes, request);
 		}
 
 		if (typeof cached === 'string') {
@@ -71,12 +71,11 @@ export class CapacitorMsal {
 		return cached;
 	}
 
-	private async loginPopup(redirectUri: string, requestScopes: string[], request?: AuthenticationParameters): Promise<TokenSet> {
+	private async loginPopup(requestScopes: string[], request?: AuthenticationParameters): Promise<TokenSet> {
 		const verifier = generators.codeVerifier();
 		const challenge = generators.codeChallenge(verifier);
 
 		const authorizeUrl = this.client.authorizationUrl({
-			redirect_uri: redirectUri,
 			scope: requestScopes.join(' '),
 			response_mode: 'query',
 			prompt: request && request.prompt,
@@ -119,6 +118,7 @@ export class CapacitorMsal {
 			window.loadURL(authorizeUrl);
 		});
 
+		const redirectUri = this.client.metadata.redirect_uris[0];
 		const params = this.client.callbackParams(responseUrl);
 		const tokens = await this.client.callback(redirectUri, params, {
 			response_type: 'code',
