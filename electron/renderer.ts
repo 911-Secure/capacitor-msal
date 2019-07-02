@@ -4,8 +4,8 @@ import { registerElectronPlugin } from '@capacitor/electron/dist/esm';
 import { Configuration, AuthenticationParameters, AuthResponse, Account, AuthError } from 'msal';
 import { ClientInfo } from 'msal/lib-commonjs/ClientInfo';
 import { IdToken } from 'msal/lib-commonjs/IdToken';
-import { MsalPlugin } from 'capacitor-msal';
 import { TokenSet } from 'openid-client';
+import { MsalPlugin } from './definitions';
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
 	private redirectUri: string | (() => string);

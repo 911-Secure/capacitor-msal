@@ -6,10 +6,9 @@
   "types": "dist/esm/index.d.ts",
   "scripts": {
     "prebuild": "npm run clean",
-    "build": "tsc",
+    "build": "tsc --project src",
     "build:electron": "npm run build --prefix=electron",
     "clean": "rm -rf ./dist",
-    "watch": "tsc --watch",
     "prepare": "run-s build build:electron"
   },
   "author": "911 Secure",
