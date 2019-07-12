@@ -1,5 +1,5 @@
-import { Configuration, AuthenticationParameters, AuthResponse, Account } from 'msal';
-export { Configuration, AuthenticationParameters, AuthResponse, Account } from 'msal';
+import { Configuration, AuthenticationParameters, AuthResponse, Account } from 'msal/lib-es6';
+export { Configuration, AuthenticationParameters, AuthResponse, Account } from 'msal/lib-es6';
 
 declare module "@capacitor/core/dist/esm/core-plugin-definitions" {
 	interface PluginRegistry {

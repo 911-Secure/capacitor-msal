@@ -1,10 +1,12 @@
-import promiseIpc from 'electron-promise-ipc';
 import { WebPlugin } from '@capacitor/core';
-import { Configuration, AuthenticationParameters, AuthResponse, Account, AuthError } from 'msal';
-import { ClientInfo } from 'msal/lib-commonjs/ClientInfo';
-import { IdToken } from 'msal/lib-commonjs/IdToken';
+import { registerElectronPlugin } from '@capacitor/electron/dist/esm';
+import { Configuration, AuthenticationParameters, AuthResponse, AuthError, Account } from 'msal/lib-es6';
+import { ClientInfo } from 'msal/lib-es6/ClientInfo';
+import { IdToken } from 'msal/lib-es6/IdToken';
 import { TokenSet } from 'openid-client';
-import { MsalPlugin } from './definitions';
+import { MsalPlugin } from '..';
+
+const promiseIpc = require('electron-promise-ipc');
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
 	private account: Account;
@@ -103,3 +105,5 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 
 const Msal = new MsalElectron();
 export { Msal };
+
+registerElectronPlugin(Msal);

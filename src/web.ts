@@ -1,5 +1,5 @@
 import { WebPlugin, registerWebPlugin } from '@capacitor/core';
-import { Configuration, UserAgentApplication, AuthenticationParameters, AuthResponse, Account } from 'msal';
+import { Configuration, UserAgentApplication, AuthenticationParameters, AuthResponse, Account } from 'msal/lib-es6';
 import { MsalPlugin } from './definitions';
 
 export class MsalWeb extends WebPlugin implements MsalPlugin {

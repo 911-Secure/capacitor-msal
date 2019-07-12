@@ -4,5 +4,11 @@
 		"module": "commonjs",
 		"esModuleInterop": true,
 		"outDir": "dist"
-	}
+	},
+	"files": [
+		"main.ts",
+	],
+	"include": [
+		"*.d.ts"
+	]
 }
