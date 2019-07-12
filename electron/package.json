@@ -15,6 +15,7 @@
     "clean": "rm -rf ./dist"
   },
   "dependencies": {
+    "@capacitor/electron": "^1.1.0",
     "electron-promise-ipc": "^1.2.2",
     "keytar": "^4.11.0",
     "openid-client": "^3.2.0"
