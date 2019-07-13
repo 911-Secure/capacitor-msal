@@ -22,23 +22,12 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 	public init(options: Configuration): Promise<void> {
 		// The following defaults come from the MSDN documentation.
 		// https://docs.microsoft.com/en-us/azure/active-directory/develop/msal-js-initializing-client-applications
-		options = Object.assign<Configuration, Configuration>({
-			auth: {
-				clientId: undefined, // This must be set by the user.
-				authority: 'https://login.microsoftonline.com/common',
-				validateAuthority: true,
-				redirectUri: window.location.href,
-				navigateToLoginRequestUrl: true
-			},
-			cache: {
-				cacheLocation: 'sessionStorage',
-				storeAuthStateInCookie: false
-			},
-			system: {
-				loadFrameTimeout: 6000,
-				tokenRenewalOffsetSeconds: 300
-			}
-		}, options);
+		options.auth = Object.assign({
+			authority: 'https://login.microsoftonline.com/common',
+			validateAuthority: true,
+			redirectUri: window.location.href,
+			navigateToLoginRequestUrl: true
+		}, options.auth);
 
 		// The default value of postLogoutRedirectUri is the final value of redirectUri.
 		if (!options.auth.postLogoutRedirectUri)

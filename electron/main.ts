@@ -24,13 +24,17 @@ export class CapacitorMsal {
 			console.warn('Unable to read Capacitor config file.', e);
 		}
 
+		// The official MSAL libraries assume v2. We need to add it explicitly.
+		options.auth.authority += '/v2.0';
+
 		this.cache = new TokenCache(`msal-${options.auth.clientId}`);
 
 		const issuer = await Issuer.discover(options.auth.authority);
 		this.client = new issuer.Client({
 			client_id: options.auth.clientId,
 			redirect_uris: [options.auth.redirectUri as string],
-			post_logout_redirect_uris: [options.auth.postLogoutRedirectUri as string]
+			post_logout_redirect_uris: [options.auth.postLogoutRedirectUri as string],
+			token_endpoint_auth_method: 'none'
 		});
 	}
 
