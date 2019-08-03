@@ -10,7 +10,7 @@ export class CapacitorMsal {
 
 	constructor() {
 		promiseIpc.on('msal-init', options => this.init(options));
-		promiseIpc.on('msal-login', request => this.login(request));
+		promiseIpc.on('msal-login', request => this.loginPopup(request));
 		promiseIpc.on('msal-get-account', () => this.getAccount());
 	}
 
@@ -38,7 +38,7 @@ export class CapacitorMsal {
 		});
 	}
 
-	public async login(request?: AuthenticationParameters): Promise<TokenSet> {
+	public async loginPopup(request?: AuthenticationParameters): Promise<TokenSet> {
 		const scopes = request && request.scopes || [];
 		const extraScopes = request && request.extraScopesToConsent || [];
 

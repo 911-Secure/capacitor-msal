@@ -17,7 +17,7 @@ export class MsalWeb extends WebPlugin implements MsalPlugin {
 		return Promise.resolve();
 	}
 
-	login(request?: AuthenticationParameters): Promise<AuthResponse> {
+	loginPopup(request?: AuthenticationParameters): Promise<AuthResponse> {
 		return this.msalInstance.loginPopup(request);
 	}
 
@@ -25,12 +25,8 @@ export class MsalWeb extends WebPlugin implements MsalPlugin {
 		return this.msalInstance.acquireTokenSilent(request);
 	}
 
-	acquireTokenInteractive(request: AuthenticationParameters): Promise<AuthResponse> {
+	acquireTokenPopup(request: AuthenticationParameters): Promise<AuthResponse> {
 		return this.msalInstance.acquireTokenPopup(request);
-	}
-
-	getLoginInProgress(): boolean {
-		return this.msalInstance.getLoginInProgress();
 	}
 
 	getAccount(): Promise<Account> {

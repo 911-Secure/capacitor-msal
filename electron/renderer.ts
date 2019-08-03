@@ -34,7 +34,7 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		return promiseIpc.send('msal-init', options);
 	}
 
-	public async login(request?: AuthenticationParameters): Promise<AuthResponse> {
+	public async loginPopup(request?: AuthenticationParameters): Promise<AuthResponse> {
 		const tokens: TokenSet = await promiseIpc.send('msal-login', request);
 		return this.tokensToResponse(tokens);
 	}
@@ -51,20 +51,14 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		throw new Error("Method not implemented.");
 	}
 
-	acquireTokenInteractive(_request: AuthenticationParameters): Promise<AuthResponse> {
-		throw new Error("Method not implemented.");
-	}
-
-	getLoginInProgress(): boolean {
+	acquireTokenPopup(_request: AuthenticationParameters): Promise<AuthResponse> {
 		throw new Error("Method not implemented.");
 	}
 
 	private tokensToResponse(tokens: TokenSet): AuthResponse {
 		const idToken = new IdToken(tokens.id_token);
 		return {
-			//uniqueId: claims.oid || claims.sub,
 			uniqueId: idToken.objectId || idToken.subject,
-			//tenantId: claims.tid,
 			tenantId: idToken.tenantId,
 			tokenType: tokens.token_type,
 			idToken: idToken,
