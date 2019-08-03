@@ -192,13 +192,13 @@ declare module 'openid-client' {
 			/**
 			 * extra request body properties to be sent to the AS during code exchange.
 			 */
-			exchangeBody: object;
+			exchangeBody?: object;
 			/**
 			 * extra client assertion payload parameters to be sent as part of a client
 			 * JWT assertion. This is only used when the client's `token_endpoint_auth_method`
 			 * is either `client_secret_jwt` or `private_key_jwt`.
 			 */
-			clientAssertionPayload: object;
+			clientAssertionPayload?: object;
 		}): Promise<TokenSet>;
 
 		/**
@@ -381,7 +381,6 @@ declare module 'openid-client' {
 			expires_in: number;
 			expires_at: number;
 			session_state: string;
-			[key: string]: string | number;
 		});
 
 		/**
@@ -398,7 +397,15 @@ declare module 'openid-client' {
 		 */
 		claims(): any;
 
-		[key: string]: any;
+		access_token: string;
+		token_type: string;
+		id_token: string;
+		refresh_token: string;
+		expires_in: number;
+		expires_at: number;
+		session_state: string;
+		scope: string;
+		client_info: string;
 	}
 
 	const generators: {

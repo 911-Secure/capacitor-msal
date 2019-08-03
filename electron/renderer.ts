@@ -1,16 +1,12 @@
 import { WebPlugin } from '@capacitor/core';
 import { registerElectronPlugin } from '@capacitor/electron/dist/esm';
-import { Configuration, AuthenticationParameters, AuthResponse, AuthError, Account } from 'msal/lib-es6';
-import { ClientInfo } from 'msal/lib-es6/ClientInfo';
-import { IdToken } from 'msal/lib-es6/IdToken';
-import { TokenSet } from 'openid-client';
+import { Configuration, AuthenticationParameters, AuthResponse, Account } from 'msal/lib-es6';
 import { MsalPlugin } from '..';
 
 const promiseIpc = require('electron-promise-ipc');
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
 	private account: Account;
-	private loginInProgress = false;
 
 	constructor() {
 		super({
@@ -22,12 +18,13 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 	public init(options: Configuration): Promise<void> {
 		// The following defaults come from the MSDN documentation.
 		// https://docs.microsoft.com/en-us/azure/active-directory/develop/msal-js-initializing-client-applications
-		options.auth = Object.assign({
+		options.auth = {
 			authority: 'https://login.microsoftonline.com/common',
 			validateAuthority: true,
 			redirectUri: window.location.href,
-			navigateToLoginRequestUrl: true
-		}, options.auth);
+			navigateToLoginRequestUrl: true,
+			...options.auth
+		};
 
 		// The default value of postLogoutRedirectUri is the final value of redirectUri.
 		if (!options.auth.postLogoutRedirectUri)
@@ -37,58 +34,23 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 	}
 
 	public async login(request?: AuthenticationParameters): Promise<AuthResponse> {
-		this.loginInProgress = true;
-		try {
-			const tokens: TokenSet = await promiseIpc.send('msal-login', request);
-
-			const response = this.buildResponse(tokens, request);
-			this.account = response.account;
-
-			return response;
-		} catch (e) {
-			// TODO: Build the appropriate sub-class.
-			throw new AuthError(e.error, e.error_description);
-		} finally {
-			this.loginInProgress = false;
-		}
-	}
-
-	public acquireTokenSilent(request: AuthenticationParameters): Promise<AuthResponse> {
-		request.prompt = 'none';
-		return this.acquireTokenInteractive(request);
-	}
-
-	public async acquireTokenInteractive(request: AuthenticationParameters): Promise<AuthResponse> {
-		try {
-			const tokens: TokenSet = await promiseIpc.send('msal-acquire-token', request);
-			return this.buildResponse(tokens, request);
-		} catch (e) {
-			// TODO: Build the appropriate sub-class.
-			throw new AuthError(e.error, e.error_description);
-		}
+		return promiseIpc.send('msal-login', request);
 	}
 
 	public getAccount(): Account {
 		return this.account;
 	}
 
-	public getLoginInProgress(): boolean {
-		return this.loginInProgress;
+	acquireTokenSilent(_request: AuthenticationParameters): Promise<AuthResponse> {
+		throw new Error("Method not implemented.");
 	}
 
-	private buildResponse(tokens: TokenSet, request: AuthenticationParameters): AuthResponse {
-		const idToken = new IdToken(tokens.id_token);
-		return {
-			uniqueId: idToken.objectId || idToken.subject,
-			tenantId: idToken.tenantId,
-			tokenType: tokens.token_type,
-			idToken: idToken,
-			accessToken: tokens.access_token,
-			scopes: tokens.scope.split(' '),
-			expiresOn: new Date(Date.now() + tokens.expires_in * 1000),
-			account: Account.createAccount(idToken, new ClientInfo(tokens.client_info)),
-			accountState: request.state
-		};
+	acquireTokenInteractive(_request: AuthenticationParameters): Promise<AuthResponse> {
+		throw new Error("Method not implemented.");
+	}
+
+	getLoginInProgress(): boolean {
+		throw new Error("Method not implemented.");
 	}
 }
 
