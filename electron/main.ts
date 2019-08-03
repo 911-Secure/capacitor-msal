@@ -1,10 +1,8 @@
 import fs from 'fs';
 import promiseIpc from 'electron-promise-ipc';
 import { BrowserWindow } from 'electron';
-import { Configuration, AuthenticationParameters, AuthResponse, Account } from 'msal';
+import { Configuration, AuthenticationParameters } from 'msal';
 import { Issuer, Client, generators, TokenSet } from 'openid-client';
-import { IdToken } from 'msal/lib-commonjs/IdToken';
-import { ClientInfo } from 'msal/lib-commonjs/ClientInfo';
 
 export class CapacitorMsal {
 	private client: Client;
@@ -13,6 +11,7 @@ export class CapacitorMsal {
 	constructor() {
 		promiseIpc.on('msal-init', options => this.init(options));
 		promiseIpc.on('msal-login', request => this.login(request));
+		promiseIpc.on('msal-get-account', () => this.getAccount());
 	}
 
 	public async init(options: Configuration): Promise<void> {
@@ -39,7 +38,7 @@ export class CapacitorMsal {
 		});
 	}
 
-	public async login(request?: AuthenticationParameters): Promise<AuthResponse> {
+	public async login(request?: AuthenticationParameters): Promise<TokenSet> {
 		const scopes = request && request.scopes || [];
 		const extraScopes = request && request.extraScopesToConsent || [];
 
@@ -95,27 +94,17 @@ export class CapacitorMsal {
 			response_type: 'code',
 			code_verifier: verifier
 		}, {
-			exchangeBody: { scope: scopes.join(' ') }
+			exchangeBody: { 
+				scope: scopes.join(' '),
+				client_info: 1 // Needed to get MSAL-specific info.
+			}
 		});
 
-		return this.tokensToResponse(this.loginTokens);
+		return this.loginTokens;
 	}
 
-	private tokensToResponse(tokens: TokenSet): AuthResponse {
-		const claims = tokens.claims();
-		const idToken = new IdToken(tokens.id_token);
-		return {
-			uniqueId: claims.oid || claims.sub,
-			tenantId: claims.tid,
-			tokenType: tokens.token_type,
-			idToken: idToken,
-			idTokenClaims: claims,
-			accessToken: tokens.access_token,
-			scopes: tokens.scope.split(' '),
-			expiresOn: new Date(tokens.expires_at),
-			account: Account.createAccount(idToken, new ClientInfo(tokens.client_info)),
-			accountState: tokens.session_state
-		};
+	public getAccount(): TokenSet {
+		return this.loginTokens;
 	}
 }
 

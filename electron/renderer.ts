@@ -2,12 +2,13 @@ import { WebPlugin } from '@capacitor/core';
 import { registerElectronPlugin } from '@capacitor/electron/dist/esm';
 import { Configuration, AuthenticationParameters, AuthResponse, Account } from 'msal/lib-es6';
 import { MsalPlugin } from '..';
+import { TokenSet } from 'openid-client';
+import { ClientInfo } from 'msal/lib-es6/ClientInfo';
+import { IdToken } from 'msal/lib-es6/IdToken';
 
 const promiseIpc = require('electron-promise-ipc');
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
-	private account: Account;
-
 	constructor() {
 		super({
 			name: 'Msal',
@@ -34,11 +35,16 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 	}
 
 	public async login(request?: AuthenticationParameters): Promise<AuthResponse> {
-		return promiseIpc.send('msal-login', request);
+		const tokens: TokenSet = await promiseIpc.send('msal-login', request);
+		return this.tokensToResponse(tokens);
 	}
 
-	public getAccount(): Account {
-		return this.account;
+	public async getAccount(): Promise<Account> {
+		const tokens: TokenSet = await promiseIpc.send('msal-get-account');
+		return tokens && Account.createAccount(
+			new IdToken(tokens.id_token),
+			new ClientInfo(tokens.client_info)
+		);
 	}
 
 	acquireTokenSilent(_request: AuthenticationParameters): Promise<AuthResponse> {
@@ -51,6 +57,24 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 
 	getLoginInProgress(): boolean {
 		throw new Error("Method not implemented.");
+	}
+
+	private tokensToResponse(tokens: TokenSet): AuthResponse {
+		const idToken = new IdToken(tokens.id_token);
+		return {
+			//uniqueId: claims.oid || claims.sub,
+			uniqueId: idToken.objectId || idToken.subject,
+			//tenantId: claims.tid,
+			tenantId: idToken.tenantId,
+			tokenType: tokens.token_type,
+			idToken: idToken,
+			idTokenClaims: idToken.claims,
+			accessToken: tokens.access_token,
+			scopes: tokens.scope.split(' '),
+			expiresOn: new Date(tokens.expires_at * 1000),
+			account: Account.createAccount(idToken, new ClientInfo(tokens.client_info)),
+			accountState: tokens.session_state
+		};
 	}
 }
 

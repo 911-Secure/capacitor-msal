@@ -33,8 +33,9 @@ export class MsalWeb extends WebPlugin implements MsalPlugin {
 		return this.msalInstance.getLoginInProgress();
 	}
 
-	getAccount(): Account {
-		return this.msalInstance.getAccount();
+	getAccount(): Promise<Account> {
+		const account = this.msalInstance.getAccount();
+		return Promise.resolve(account);
 	}
 }
 

@@ -13,5 +13,5 @@ export interface MsalPlugin {
 	acquireTokenSilent(request: AuthenticationParameters): Promise<AuthResponse>;
 	acquireTokenInteractive(request: AuthenticationParameters): Promise<AuthResponse>;
 	getLoginInProgress(): boolean;
-	getAccount(): Account;
+	getAccount(): Promise<Account>;
 }
