@@ -1,5 +1,4 @@
 import fs from 'fs';
-import os from 'os';
 import keytar from 'keytar';
 import promiseIpc from 'electron-promise-ipc';
 import { BrowserWindow } from 'electron';
