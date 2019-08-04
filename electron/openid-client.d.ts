@@ -373,15 +373,7 @@ declare module 'openid-client' {
 		 * Note: manually constructed TokenSet instances do not undergo any validations.
 		 * @param input
 		 */
-		constructor(input: {
-			access_token: string;
-			token_type: string;
-			id_token: string;
-			refresh_token: string;
-			expires_in: number;
-			expires_at: number;
-			session_state: string;
-		});
+		constructor(input: any);
 
 		/**
 		 * Given that the instance has expires_at / expires_in this function returns

@@ -1,4 +1,6 @@
 import fs from 'fs';
+import os from 'os';
+import keytar from 'keytar';
 import promiseIpc from 'electron-promise-ipc';
 import { BrowserWindow } from 'electron';
 import { Configuration, AuthenticationParameters } from 'msal';
@@ -6,7 +8,8 @@ import { Issuer, Client, generators, TokenSet } from 'openid-client';
 
 export class CapacitorMsal {
 	private client: Client;
-	private loginTokens: TokenSet;
+	private tokens: TokenSet;
+	private keytarService: string;
 
 	constructor() {
 		promiseIpc.on('msal-init', options => this.init(options));
@@ -37,6 +40,8 @@ export class CapacitorMsal {
 			post_logout_redirect_uris: [options.auth.postLogoutRedirectUri as string],
 			token_endpoint_auth_method: 'none'
 		});
+
+		this.keytarService = `msal-${options.auth.clientId}`;
 	}
 
 	public async loginPopup(request?: AuthenticationParameters): Promise<TokenSet> {
@@ -91,34 +96,57 @@ export class CapacitorMsal {
 
 		const redirectUri = this.client.metadata.redirect_uris[0];
 		const params = this.client.callbackParams(responseUrl);
-		this.loginTokens = await this.client.callback(redirectUri, params, {
+		this.tokens = await this.client.callback(redirectUri, params, {
 			response_type: 'code',
 			code_verifier: verifier
 		}, {
-			exchangeBody: { 
-				scope: scopes.join(' '),
-				client_info: 1 // Needed to get MSAL-specific info.
-			}
-		});
-
-		return this.loginTokens;
-	}
-
-	public async acquireTokenSilent(request: AuthenticationParameters): Promise<TokenSet> {
-		if (this.loginTokens.expired()) {
-			this.loginTokens = await this.client.refresh(this.loginTokens, {
 				exchangeBody: {
-					scope: (request.scopes || []).join(' '),
+					scope: scopes.join(' '),
 					client_info: 1 // Needed to get MSAL-specific info.
 				}
 			});
+
+		await this.cacheTokens(this.tokens);
+		return this.tokens;
+	}
+
+	public async acquireTokenSilent(request: AuthenticationParameters): Promise<TokenSet> {
+		let tokens = this.tokens || await this.getCachedTokens();
+
+		if (tokens.expired()) {
+			if (tokens.refresh_token) {
+				this.tokens = await this.client.refresh(tokens, {
+					exchangeBody: {
+						scope: (request.scopes || []).join(' '),
+						client_info: 1 // Needed to get MSAL-specific info.
+					}
+				});
+				await this.cacheTokens(this.tokens);
+			} else {
+				throw {
+					error: 'interaction_required',
+					error_description: 'The request requires user interaction. For example, an additional authentication step is required.'
+				}
+			}
 		}
 
-		return this.loginTokens;
+		return this.tokens;
 	}
 
 	public getAccount(): TokenSet {
-		return this.loginTokens;
+		return this.tokens;
+	}
+
+	private async getCachedTokens(): Promise<TokenSet> {
+		const refreshToken = await keytar.getPassword(this.keytarService, 'tokens');
+		return new TokenSet({ 
+			refresh_token: refreshToken,
+			expires_at: 0 // Force refresh
+		});
+	}
+
+	private cacheTokens(tokens: TokenSet): Promise<void> {
+		return keytar.setPassword(this.keytarService, 'tokens', tokens.refresh_token);
 	}
 }
 
