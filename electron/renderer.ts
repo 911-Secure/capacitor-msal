@@ -35,7 +35,12 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 	}
 
 	public async loginPopup(request?: AuthenticationParameters): Promise<AuthResponse> {
-		const tokens: TokenSet = await promiseIpc.send('msal-login', request);
+		const tokens: TokenSet = await promiseIpc.send('msal-login-popup', request);
+		return this.tokensToResponse(tokens);
+	}
+
+	public async acquireTokenSilent(request: AuthenticationParameters): Promise<AuthResponse> {
+		const tokens: TokenSet = await promiseIpc.send('msal-acquire-token-silent', request);
 		return this.tokensToResponse(tokens);
 	}
 
@@ -45,14 +50,6 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 			new IdToken(tokens.id_token),
 			new ClientInfo(tokens.client_info)
 		);
-	}
-
-	acquireTokenSilent(_request: AuthenticationParameters): Promise<AuthResponse> {
-		throw new Error("Method not implemented.");
-	}
-
-	acquireTokenPopup(_request: AuthenticationParameters): Promise<AuthResponse> {
-		throw new Error("Method not implemented.");
 	}
 
 	private tokensToResponse(tokens: TokenSet): AuthResponse {

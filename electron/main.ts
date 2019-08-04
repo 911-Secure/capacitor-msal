@@ -10,7 +10,8 @@ export class CapacitorMsal {
 
 	constructor() {
 		promiseIpc.on('msal-init', options => this.init(options));
-		promiseIpc.on('msal-login', request => this.loginPopup(request));
+		promiseIpc.on('msal-login-popup', request => this.loginPopup(request));
+		promiseIpc.on('msal-acquire-token-silent', request => this.acquireTokenSilent(request));
 		promiseIpc.on('msal-get-account', () => this.getAccount());
 	}
 
@@ -99,6 +100,19 @@ export class CapacitorMsal {
 				client_info: 1 // Needed to get MSAL-specific info.
 			}
 		});
+
+		return this.loginTokens;
+	}
+
+	public async acquireTokenSilent(request: AuthenticationParameters): Promise<TokenSet> {
+		if (this.loginTokens.expired()) {
+			this.loginTokens = await this.client.refresh(this.loginTokens, {
+				exchangeBody: {
+					scope: (request.scopes || []).join(' '),
+					client_info: 1 // Needed to get MSAL-specific info.
+				}
+			});
+		}
 
 		return this.loginTokens;
 	}

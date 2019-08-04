@@ -11,6 +11,5 @@ export interface MsalPlugin {
 	init(options: Configuration): Promise<void>;
 	loginPopup(request?: AuthenticationParameters): Promise<AuthResponse>;
 	acquireTokenSilent(request: AuthenticationParameters): Promise<AuthResponse>;
-	acquireTokenPopup(request: AuthenticationParameters): Promise<AuthResponse>;
 	getAccount(): Promise<Account>;
 }
