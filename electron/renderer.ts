@@ -46,7 +46,7 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 
 	public async getAccount(): Promise<Account> {
 		const tokens: TokenSet = await promiseIpc.send('msal-get-account');
-		return tokens && Account.createAccount(
+		return tokens.id_token && Account.createAccount(
 			new IdToken(tokens.id_token),
 			new ClientInfo(tokens.client_info)
 		);
