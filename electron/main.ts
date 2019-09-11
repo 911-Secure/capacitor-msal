@@ -1,7 +1,7 @@
 import fs from 'fs';
 import keytar from 'keytar';
 import promiseIpc from 'electron-promise-ipc';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, IpcMainEvent } from 'electron';
 import { Configuration, AuthenticationParameters } from 'msal';
 import { Issuer, Client, generators, TokenSet } from 'openid-client';
 
@@ -22,7 +22,7 @@ export class CapacitorMsal {
 	public async init(): Promise<void> {
 		this.tokens = await this.getCachedTokens()
 		promiseIpc.on('msal-init', options => this.msalInit(options));
-		promiseIpc.on('msal-login-popup', request => this.loginPopup(request));
+		promiseIpc.on('msal-login-popup', (request, event) => this.loginPopup(request, event));
 		promiseIpc.on('msal-acquire-token-silent', request => this.acquireTokenSilent(request));
 		promiseIpc.on('msal-get-account', () => this.getAccount());
 	}
@@ -55,7 +55,7 @@ export class CapacitorMsal {
 		this.keytarService = `msal-${options.auth.clientId}`;
 	}
 
-	private async loginPopup(request?: AuthenticationParameters): Promise<TokenSet> {
+	private async loginPopup(request: AuthenticationParameters, event: IpcMainEvent): Promise<TokenSet> {
 		const scopes = request && request.scopes || [];
 		const extraScopes = request && request.extraScopesToConsent || [];
 
@@ -80,8 +80,9 @@ export class CapacitorMsal {
 			const window = new BrowserWindow({
 				width: 1000,
 				height: 600,
-				show: false
-				// TODO: Make this window a modal
+				show: false,
+				parent: BrowserWindow.fromWebContents(event.sender),
+				modal: true
 			});
 
 			if (request.prompt !== 'none') {
