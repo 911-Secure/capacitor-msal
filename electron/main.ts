@@ -19,8 +19,7 @@ export class CapacitorMsal {
 
 	constructor(private logger: Logger = console) { }
 
-	public async init(): Promise<void> {
-		this.tokens = await this.getCachedTokens()
+	public init(): void {
 		promiseIpc.on('msal-init', options => this.msalInit(options));
 		promiseIpc.on('msal-login-popup', (request, event) => this.loginPopup(request, event));
 		promiseIpc.on('msal-acquire-token-silent', request => this.acquireTokenSilent(request));
@@ -53,6 +52,7 @@ export class CapacitorMsal {
 		});
 
 		this.keytarService = `msal-${options.auth.clientId}`;
+		this.tokens = await this.getCachedTokens();
 	}
 
 	private async loginPopup(request: AuthenticationParameters, event: IpcMainEvent): Promise<TokenSet> {
