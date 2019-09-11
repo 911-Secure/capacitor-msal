@@ -5,20 +5,30 @@ import { BrowserWindow } from 'electron';
 import { Configuration, AuthenticationParameters } from 'msal';
 import { Issuer, Client, generators, TokenSet } from 'openid-client';
 
+interface Logger {
+	debug(...params: any[]): void;
+	info(...params: any[]): void;
+	warn(...params: any[]): void;
+	error(...params: any[]): void;
+}
+
 export class CapacitorMsal {
 	private client: Client;
 	private tokens: TokenSet;
 	private keytarService: string;
 
-	constructor() {
-		promiseIpc.on('msal-init', options => this.init(options));
+	constructor(private logger: Logger = console) { }
+	
+	public init(): void {
+		promiseIpc.on('msal-init', options => this.msalInit(options));
 		promiseIpc.on('msal-login-popup', request => this.loginPopup(request));
 		promiseIpc.on('msal-acquire-token-silent', request => this.acquireTokenSilent(request));
 		promiseIpc.on('msal-get-account', () => this.getAccount());
 	}
 
-	public async init(options: Configuration): Promise<void> {
+	private async msalInit(options: Configuration): Promise<void> {
 		try {
+			this.logger.debug('Loading Capcaitor configuration.');
 			const configFile = fs.readFileSync('./capacitor.config.json', 'utf-8');
 			const config = JSON.parse(configFile);
 			options.auth = {
@@ -26,12 +36,13 @@ export class CapacitorMsal {
 				...config.plugins.Msal
 			};
 		} catch (e) {
-			console.warn('Unable to read Capacitor config file.', e);
+			this.logger.warn('Unable to read Capacitor config file.', e);
 		}
 
 		// The official MSAL libraries assume v2. We need to add it explicitly.
 		options.auth.authority += '/v2.0';
 
+		this.logger.debug('Initializing OAuth client.');
 		const issuer = await Issuer.discover(options.auth.authority);
 		this.client = new issuer.Client({
 			client_id: options.auth.clientId,
@@ -43,7 +54,7 @@ export class CapacitorMsal {
 		this.keytarService = `msal-${options.auth.clientId}`;
 	}
 
-	public async loginPopup(request?: AuthenticationParameters): Promise<TokenSet> {
+	private async loginPopup(request?: AuthenticationParameters): Promise<TokenSet> {
 		const scopes = request && request.scopes || [];
 		const extraScopes = request && request.extraScopesToConsent || [];
 
@@ -61,6 +72,7 @@ export class CapacitorMsal {
 		});
 
 		// Login using a popup.
+		this.logger.info('Opening login popup window.');
 		const responseUrl = await new Promise<string>((resolve, reject) => {
 			let receivedResponse = false;
 
@@ -93,6 +105,7 @@ export class CapacitorMsal {
 			window.loadURL(authorizeUrl);
 		});
 
+		this.logger.info('Acquiring access token.');
 		const redirectUri = this.client.metadata.redirect_uris[0];
 		const params = this.client.callbackParams(responseUrl);
 		this.tokens = await this.client.callback(redirectUri, params, {
@@ -109,11 +122,12 @@ export class CapacitorMsal {
 		return this.tokens;
 	}
 
-	public async acquireTokenSilent(request: AuthenticationParameters): Promise<TokenSet> {
+	private async acquireTokenSilent(request: AuthenticationParameters): Promise<TokenSet> {
 		let tokens = this.tokens || await this.getCachedTokens();
 
 		if (tokens.expired()) {
 			if (tokens.refresh_token) {
+				this.logger.info('Refreshing access tokens.');
 				this.tokens = await this.client.refresh(tokens, {
 					exchangeBody: {
 						scope: (request.scopes || []).join(' '),
@@ -132,11 +146,12 @@ export class CapacitorMsal {
 		return this.tokens;
 	}
 
-	public getAccount(): TokenSet {
+	private getAccount(): TokenSet {
 		return this.tokens;
 	}
 
 	private async getCachedTokens(): Promise<TokenSet> {
+		this.logger.debug('Retrieving refresh token from cache.');
 		const refreshToken = await keytar.getPassword(this.keytarService, 'tokens');
 		return new TokenSet({ 
 			refresh_token: refreshToken,
@@ -145,8 +160,7 @@ export class CapacitorMsal {
 	}
 
 	private cacheTokens(tokens: TokenSet): Promise<void> {
+		this.logger.debug('Caching refresh token.');
 		return keytar.setPassword(this.keytarService, 'tokens', tokens.refresh_token);
 	}
 }
-
-export default new CapacitorMsal();
