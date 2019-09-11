@@ -1,6 +1,6 @@
 {
   "name": "capacitor-msal",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "A Capacitor plugin that provides OAuth 2.0 authentication using the Microsoft Authentication Library",
   "main": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
