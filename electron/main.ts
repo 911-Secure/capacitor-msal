@@ -1,7 +1,8 @@
 import fs from 'fs';
+import path from 'path';
 import keytar from 'keytar';
 import promiseIpc from 'electron-promise-ipc';
-import { BrowserWindow, IpcMainEvent } from 'electron';
+import { app, BrowserWindow, IpcMainEvent } from 'electron';
 import { Configuration, AuthenticationParameters } from 'msal';
 import { Issuer, Client, generators, TokenSet } from 'openid-client';
 
@@ -20,6 +21,7 @@ export class CapacitorMsal {
 	constructor(private logger: Logger = console) { }
 
 	public init(): void {
+		this.logger.debug('Initializing IPC handlers.');
 		promiseIpc.on('msal-init', options => this.msalInit(options));
 		promiseIpc.on('msal-login-popup', (request, event) => this.loginPopup(request, event));
 		promiseIpc.on('msal-acquire-token-silent', request => this.acquireTokenSilent(request));
@@ -29,7 +31,8 @@ export class CapacitorMsal {
 	private async msalInit(options: Configuration): Promise<void> {
 		try {
 			this.logger.debug('Loading Capcaitor configuration.');
-			const configFile = fs.readFileSync('./capacitor.config.json', 'utf-8');
+			const filePath = path.join(app.getAppPath(), 'capacitor.config.json');
+			const configFile = fs.readFileSync(filePath, 'utf-8');
 			const config = JSON.parse(configFile);
 			options.auth = {
 				...options.auth,
