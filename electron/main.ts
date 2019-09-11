@@ -18,8 +18,9 @@ export class CapacitorMsal {
 	private keytarService: string;
 
 	constructor(private logger: Logger = console) { }
-	
-	public init(): void {
+
+	public async init(): Promise<void> {
+		this.tokens = await this.getCachedTokens()
 		promiseIpc.on('msal-init', options => this.msalInit(options));
 		promiseIpc.on('msal-login-popup', request => this.loginPopup(request));
 		promiseIpc.on('msal-acquire-token-silent', request => this.acquireTokenSilent(request));
@@ -112,23 +113,21 @@ export class CapacitorMsal {
 			response_type: 'code',
 			code_verifier: verifier
 		}, {
-				exchangeBody: {
-					scope: scopes.join(' '),
-					client_info: 1 // Needed to get MSAL-specific info.
-				}
-			});
+			exchangeBody: {
+				scope: scopes.join(' '),
+				client_info: 1 // Needed to get MSAL-specific info.
+			}
+		});
 
 		await this.cacheTokens(this.tokens);
 		return this.tokens;
 	}
 
 	private async acquireTokenSilent(request: AuthenticationParameters): Promise<TokenSet> {
-		let tokens = this.tokens || await this.getCachedTokens();
-
-		if (tokens.expired()) {
-			if (tokens.refresh_token) {
+		if (this.tokens.expired()) {
+			if (this.tokens.refresh_token) {
 				this.logger.info('Refreshing access tokens.');
-				this.tokens = await this.client.refresh(tokens, {
+				this.tokens = await this.client.refresh(this.tokens, {
 					exchangeBody: {
 						scope: (request.scopes || []).join(' '),
 						client_info: 1 // Needed to get MSAL-specific info.
@@ -139,7 +138,7 @@ export class CapacitorMsal {
 				throw {
 					error: 'interaction_required',
 					error_description: 'The request requires user interaction. For example, an additional authentication step is required.'
-				}
+				};
 			}
 		}
 
@@ -153,7 +152,7 @@ export class CapacitorMsal {
 	private async getCachedTokens(): Promise<TokenSet> {
 		this.logger.debug('Retrieving refresh token from cache.');
 		const refreshToken = await keytar.getPassword(this.keytarService, 'tokens');
-		return new TokenSet({ 
+		return new TokenSet({
 			refresh_token: refreshToken,
 			expires_at: 0 // Force refresh
 		});
