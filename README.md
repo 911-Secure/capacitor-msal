@@ -65,7 +65,7 @@ mainWindow = new BrowserWindow({
 });
 ```
 
-Configuration options within the `auth` section can also be specified in the `capacitor.config.json` file. Options specified in this file will override the options specified in the `init` method. For example:
+The configuration file `capacitor.config.json` is required to use this plugin. The `appId` specified in this file will be used as the storage key for refresh tokens. Additionally,`auth` configuration options can be specified in this file. Options specified here will override the options specified in the `init` method. For example:
 ```json
 {
 	"appId": "YOUR_APP_ID",
