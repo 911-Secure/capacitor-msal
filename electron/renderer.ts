@@ -48,7 +48,7 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		const tokens: TokenSet = await promiseIpc.send('msal-get-account');
 		return tokens.id_token && Account.createAccount(
 			new IdToken(tokens.id_token),
-			new ClientInfo(tokens.client_info)
+			new ClientInfo(tokens.client_info as string)
 		);
 	}
 
@@ -63,7 +63,10 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 			accessToken: tokens.access_token,
 			scopes: tokens.scope.split(' '),
 			expiresOn: new Date(tokens.expires_at * 1000),
-			account: Account.createAccount(idToken, new ClientInfo(tokens.client_info)),
+			account: Account.createAccount(
+				idToken,
+				new ClientInfo(tokens.client_info as string)
+			),
 			accountState: tokens.session_state
 		};
 	}

@@ -56,7 +56,8 @@ export class CapacitorMsal {
 		this.tokens = await this.getCachedTokens();
 	}
 
-	private async loginPopup(request: AuthenticationParameters, event: IpcMainEvent): Promise<TokenSet> {
+	private async loginPopup(request: AuthenticationParameters | undefined, event: IpcMainEvent)
+		: Promise<TokenSet> {
 		const scopes = request && request.scopes || [];
 		const extraScopes = request && request.extraScopesToConsent || [];
 

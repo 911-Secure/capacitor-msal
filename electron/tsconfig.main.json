@@ -6,7 +6,7 @@
 		"outDir": "dist"
 	},
 	"files": [
-		"main.ts",
+		"main.ts"
 	],
 	"include": [
 		"*.d.ts"
