@@ -29,18 +29,17 @@ export class CapacitorMsal {
 	}
 
 	private async msalInit(options: Configuration): Promise<void> {
-		try {
-			this.logger.debug('Loading Capcaitor configuration.');
-			const filePath = path.join(app.getAppPath(), 'capacitor.config.json');
-			const configFile = fs.readFileSync(filePath, 'utf-8');
-			const config = JSON.parse(configFile);
-			options.auth = {
-				...options.auth,
-				...config.plugins.Msal
-			};
-		} catch (e) {
-			this.logger.warn('Unable to read Capacitor config file.', e);
-		}
+		this.logger.debug('Loading Capcaitor configuration.');
+		const filePath = path.join(app.getAppPath(), 'capacitor.config.json');
+		const configFile = fs.readFileSync(filePath, 'utf-8');
+
+		const config = JSON.parse(configFile);
+		this.keytarService = config.appId;
+
+		options.auth = {
+			...options.auth,
+			...config.plugins.Msal
+		};
 
 		// The official MSAL libraries assume v2. We need to add it explicitly.
 		options.auth.authority += '/v2.0';
@@ -54,7 +53,6 @@ export class CapacitorMsal {
 			token_endpoint_auth_method: 'none'
 		});
 
-		this.keytarService = `msal-${options.auth.clientId}`;
 		this.tokens = await this.getCachedTokens();
 	}
 
