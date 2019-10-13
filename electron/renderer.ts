@@ -4,9 +4,10 @@ import { Configuration, AuthenticationParameters, AuthResponse, Account } from '
 import { ClientInfo } from 'msal/lib-es6/ClientInfo';
 import { IdToken } from 'msal/lib-es6/IdToken';
 import { TokenSet } from 'openid-client';
+import { PromiseIpcBase } from 'electron-promise-ipc';
 import { MsalPlugin } from '..';
 
-const promiseIpc = require('electron-promise-ipc');
+const promiseIpc: PromiseIpcBase = require('electron-promise-ipc');
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
 	constructor() {
@@ -35,17 +36,17 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 	}
 
 	public async loginPopup(request?: AuthenticationParameters): Promise<AuthResponse> {
-		const tokens: TokenSet = await promiseIpc.send('msal-login-popup', request);
+		const tokens = await promiseIpc.send('msal-login-popup', request);
 		return this.tokensToResponse(tokens);
 	}
 
 	public async acquireTokenSilent(request: AuthenticationParameters): Promise<AuthResponse> {
-		const tokens: TokenSet = await promiseIpc.send('msal-acquire-token-silent', request);
+		const tokens = await promiseIpc.send('msal-acquire-token-silent', request);
 		return this.tokensToResponse(tokens);
 	}
 
 	public async getAccount(): Promise<Account> {
-		const tokens: TokenSet = await promiseIpc.send('msal-get-account');
+		const tokens = await promiseIpc.send('msal-get-account');
 		return tokens.id_token && Account.createAccount(
 			new IdToken(tokens.id_token),
 			new ClientInfo(tokens.client_info as string)
