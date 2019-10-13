@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import keytar from 'keytar';
-import promiseIpc from 'electron-promise-ipc';
+import { default as promiseIpc, PromiseIpcMain } from 'electron-promise-ipc';
 import { app, BrowserWindow } from 'electron';
 import { Issuer, Client, generators, TokenSet } from 'openid-client';
 
@@ -16,13 +16,14 @@ export class CapacitorMsal {
 	private client: Client;
 	private tokens: TokenSet;
 	private keytarService: string;
+	private ipc: PromiseIpcMain = promiseIpc;
 
 	constructor(private logger: Logger = console) { }
 
 	public init(): void {
 		this.logger.debug('Initializing IPC handlers.');
 
-		promiseIpc.on('msal-init', async options => {
+		this.ipc.on('msal-init', async options => {
 			this.logger.debug('Loading Capcaitor configuration.');
 			const filePath = path.join(app.getAppPath(), 'capacitor.config.json');
 			const configFile = fs.readFileSync(filePath, 'utf-8');
@@ -50,7 +51,7 @@ export class CapacitorMsal {
 			this.tokens = await this.getCachedTokens();
 		});
 
-		promiseIpc.on('msal-login-popup', async (request, event) => {
+		this.ipc.on('msal-login-popup', async (request, event) => {
 			const scopes = request && request.scopes || [];
 			const extraScopes = request && request.extraScopesToConsent || [];
 
@@ -119,7 +120,7 @@ export class CapacitorMsal {
 			return this.tokens;
 		});
 
-		promiseIpc.on('msal-acquire-token-silent', async request => {
+		this.ipc.on('msal-acquire-token-silent', async request => {
 			if (this.tokens.expired()) {
 				if (this.tokens.refresh_token) {
 					this.logger.info('Refreshing access tokens.');
@@ -141,7 +142,7 @@ export class CapacitorMsal {
 			return this.tokens;
 		});
 
-		promiseIpc.on('msal-get-account', () => this.tokens);
+		this.ipc.on('msal-get-account', () => this.tokens);
 	}
 
 	private async getCachedTokens(): Promise<TokenSet> {

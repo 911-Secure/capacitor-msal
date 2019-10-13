@@ -1,27 +1,53 @@
+type IpcMain = import('electron').IpcMain;
 type IpcMainEvent = import('electron').IpcMainEvent;
+type IpcRenderer = import('electron').IpcRenderer;
+type IpcRendererEvent = import('electron').IpcRendererEvent;
+type WebContents = import('electron').WebContents;
 type Configuration = import('msal/lib-es6').Configuration;
 type AuthenticationParameters = import('msal/lib-es6').AuthenticationParameters;
 type TokenSet = import('openid-client').TokenSet;
 
 declare module 'electron-promise-ipc' {
-	export type PromiseIpcBase = {
-		// Methods should follow this pattern.
-		// send(route: 'some-string', first: TFirst, second: TSecond): Promise<TReturn>;
-		// on(route: 'some-string', listener: (first: TFirst, second: TSecond, event: IpcMainEvent) => Promise<TReturn> | TReturn): PromiseIpcBase;
+	type Listener = Function;
+	type WrappedListener = (event: IpcMainEvent | IpcRendererEvent, replyChannel: string, ...dataArgs: unknown[]) => void;
+	type Options = { maxTimeoutMs: number };
 
-		send(route: 'msal-init', options: Configuration): Promise<void>;
-		on(route: 'msal-init', listener: (options: Configuration, event: IpcMainEvent) => Promise<void> | void): PromiseIpcBase;
+	abstract class PromiseIpcBase {
+		maxTimeoutMs: number;
+		eventEmitter: IpcMain | IpcRenderer;
+		routeListenerMap: Map<string, Listener>;
+		listenerMap: Map<Listener, WrappedListener>;
 
-		send(route: 'msal-login-popup', request?: AuthenticationParameters): Promise<TokenSet>;
-		on(route: 'msal-login-popup', listener: (request: AuthenticationParameters | undefined, event: IpcMainEvent) => Promise<TokenSet> | TokenSet): PromiseIpcBase;
+		constructor(opts: Options | undefined, eventEmitter: IpcMain | IpcRenderer);
 
-		send(route: 'msal-acquire-token-silent', request: AuthenticationParameters): Promise<TokenSet>;
-		on(route: 'msal-acquire-token-silent', listener: (request: AuthenticationParameters, event: IpcMainEvent) => Promise<TokenSet> | TokenSet): PromiseIpcBase;
-
-		send(route: 'msal-get-account'): Promise<TokenSet>;
-		on(route: 'msal-get-account', listener: (event: IpcMainEvent) => Promise<TokenSet> | TokenSet): PromiseIpcBase;
+		send(route: string, sender: WebContents | IpcRenderer, ...dataArgs: unknown[]): Promise<unknown>;
+		on(route: string, listener: Listener): this;
+		off(route: string, listener: Listener): void;
+		removeListener(route: string, listener: Listener): void;
 	}
 
-	const promiseIpc: PromiseIpcBase;
+	export class PromiseIpcMain extends PromiseIpcBase {
+		constructor(opts?: Options);
+		send(route: string, webContents: WebContents, ...dataArgs: unknown[]): Promise<unknown>;
+		
+		// Custom overloads begin here.
+		on(route: 'msal-init', listener: (options: Configuration, event: IpcMainEvent) => Promise<void> | void): this;
+		on(route: 'msal-login-popup', listener: (request: AuthenticationParameters | undefined, event: IpcMainEvent) => Promise<TokenSet> | TokenSet): this;
+		on(route: 'msal-acquire-token-silent', listener: (request: AuthenticationParameters, event: IpcMainEvent) => Promise<TokenSet> | TokenSet): this;
+		on(route: 'msal-get-account', listener: (event: IpcMainEvent) => Promise<TokenSet> | TokenSet): this;
+	}
+
+	export class PromiseIpcRenderer extends PromiseIpcBase {
+		constructor(opts?: Options);
+		send(route: string, ...dataArgs: unknown[]): Promise<unknown>;
+		
+		// Custom overloads begin here.
+		send(route: 'msal-init', options: Configuration): Promise<void>;
+		send(route: 'msal-login-popup', request?: AuthenticationParameters): Promise<TokenSet>;
+		send(route: 'msal-acquire-token-silent', request: AuthenticationParameters): Promise<TokenSet>;
+		send(route: 'msal-get-account'): Promise<TokenSet>;
+	}
+
+	const promiseIpc: PromiseIpcMain | PromiseIpcRenderer;
 	export default promiseIpc;
 }

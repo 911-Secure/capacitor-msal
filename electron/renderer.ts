@@ -4,10 +4,10 @@ import { Configuration, AuthenticationParameters, AuthResponse, Account } from '
 import { ClientInfo } from 'msal/lib-es6/ClientInfo';
 import { IdToken } from 'msal/lib-es6/IdToken';
 import { TokenSet } from 'openid-client';
-import { PromiseIpcBase } from 'electron-promise-ipc';
+import { PromiseIpcRenderer } from 'electron-promise-ipc';
 import { MsalPlugin } from '..';
 
-const promiseIpc: PromiseIpcBase = require('electron-promise-ipc');
+const promiseIpc: PromiseIpcRenderer = require('electron-promise-ipc');
 
 export class MsalElectron extends WebPlugin implements MsalPlugin {
 	constructor() {
