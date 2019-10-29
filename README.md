@@ -37,18 +37,21 @@ The Web platform is implemented as a passthrough to MSAL.js. No extra configurat
 
 Once this plugin has been installed in your application, the Electron implementation needs to be installed into your Electron app as a dependency. Assuming your Electron app is one level below your root `package.json`, use the following command.
 ```bash
-npm install ../node_modules/capacitor-msal/electron/
+npm install ../node_modules/capacitor-msal/capacitor-msal-electron-<version>.tgz
 ```
+
+The Electron plugin uses the native module `keytar` to securely store user refresh tokens. You will need a module that rebuilds native dependencies, such as `electron-rebuild` or `electron-builder`.
 
 Next, the Electron implementation needs to be imported into your application as a preload script. This implementation is exported as ES Modules. The `esm` package is recommended to import this module.
 
 Create a script (e.g. `preload.js`) with the following content.
 ```js
-require('@capacitor/electron/dist/electron-bridge');
-const importEsm = require('esm')(module, {
+require = require('esm')(module, {
 	mainFields: ['module']
 });
-importEsm('capacitor-msal/electron');
+
+require('@capacitor/electron/dist/electron-bridge');
+require('capacitor-msal-electron');
 ```
 This will run in the renderer process to add Msal to the Capacitor Plugins proxy.
 
@@ -63,6 +66,15 @@ mainWindow = new BrowserWindow({
 		preload: path.join(__dirname, 'preload.js')
 	}
 });
+```
+
+Finally, the plugin needs to be added to the main process. A custom logger can be used to capture debug information from the plugin. The module `electron-log` is recommended.
+```js
+const logger = require('electron-log');
+const { CapacitorMsal } = require('capacitor-msal-electron');
+
+const msal = new CapacitorMsal(logger);
+msal.init();
 ```
 
 The configuration file `capacitor.config.json` is required to use this plugin. The `appId` specified in this file will be used as the storage key for refresh tokens. Additionally,`auth` configuration options can be specified in this file. Options specified here will override the options specified in the `init` method. For example:
