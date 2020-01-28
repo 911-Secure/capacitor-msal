@@ -1,9 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import keytar from 'keytar';
+import fetch from 'electron-fetch';
+import base64url from 'base64url';
+import FormData from 'form-data';
+import { createHash, randomBytes } from 'crypto';
 import { default as promiseIpc, PromiseIpcMain } from 'electron-promise-ipc';
 import { app, BrowserWindow } from 'electron';
-import { Issuer, Client, generators, TokenSet } from 'openid-client';
+import { OpenIdConfiguration, TokenResponse, ErrorResponse } from './msal';
 
 interface Logger {
 	debug(...params: any[]): void;
@@ -13,18 +17,19 @@ interface Logger {
 }
 
 export class CapacitorMsal {
-	private client: Client;
-	private tokens: TokenSet;
+	private openId: OpenIdConfiguration;
+	private options: Configuration;
+	private tokens: TokenResponse;
 	private keytarService: string;
 	private ipc: PromiseIpcMain = promiseIpc;
 
 	constructor(private logger: Logger = console) { }
 
 	public init(): void {
-		this.logger.debug('Initializing IPC handlers.');
+		this.logger.debug('Initializing IPC handlers');
 
 		this.ipc.on('msal-init', async options => {
-			this.logger.debug('Loading Capcaitor configuration.');
+			this.logger.debug('Loading Capcaitor configuration');
 			const filePath = path.join(app.getAppPath(), 'capacitor.config.json');
 			const configFile = fs.readFileSync(filePath, 'utf-8');
 
@@ -39,14 +44,9 @@ export class CapacitorMsal {
 			// The official MSAL libraries assume v2. We need to add it explicitly.
 			options.auth.authority += '/v2.0';
 
-			this.logger.debug('Initializing OAuth client.');
-			const issuer = await Issuer.discover(options.auth.authority);
-			this.client = new issuer.Client({
-				client_id: options.auth.clientId,
-				redirect_uris: [options.auth.redirectUri as string],
-				post_logout_redirect_uris: [options.auth.postLogoutRedirectUri as string],
-				token_endpoint_auth_method: 'none'
-			});
+			this.logger.debug('Retrieving OpenID Connect metadata');
+			const response = await fetch(`${options.auth.authority}/.well-known/openid-configuration`);
+			this.openId = await response.json();
 
 			this.tokens = await this.getCachedTokens();
 		});
@@ -55,22 +55,26 @@ export class CapacitorMsal {
 			const scopes = request && request.scopes || [];
 			const extraScopes = request && request.extraScopesToConsent || [];
 
-			const verifier = generators.codeVerifier();
-			const challenge = generators.codeChallenge(verifier);
+			const verifier = base64url(randomBytes(32));
+			const challenge = base64url(createHash('sha256').update(verifier).digest());
 
-			const authorizeUrl = this.client.authorizationUrl({
+			const authorizeUrl = new URL(this.openId.authorization_endpoint);
+			authorizeUrl.search = new URLSearchParams({
+				client_id: this.options.auth.clientId,
+				response_type: 'code',
+				redirect_uri: this.options.auth.redirectUri as string,
 				scope: scopes.concat(extraScopes).join(' '),
 				response_mode: 'query',
 				prompt: request && request.prompt,
 				login_hint: request && request.loginHint,
-				// TODO: domain_hint,
+				// TODO: domain_hint
 				code_challenge_method: 'S256',
 				code_challenge: challenge
-			});
+			}) as any;
 
 			// Login using a popup.
 			this.logger.info('Opening login popup window.');
-			const responseUrl = await new Promise<string>((resolve, reject) => {
+			const responseUrl = await new Promise<URL>((resolve, reject) => {
 				let receivedResponse = false;
 
 				const window = new BrowserWindow({
@@ -97,41 +101,48 @@ export class CapacitorMsal {
 				window.webContents.on('will-redirect', (_event, url) => {
 					receivedResponse = true;
 					window.close();
-					resolve(url);
+					resolve(new URL(url));
 				});
 
-				window.loadURL(authorizeUrl);
+				window.loadURL(authorizeUrl.href);
 			});
 
-			this.logger.info('Acquiring access token.');
-			const redirectUri = this.client.metadata.redirect_uris[0];
-			const params = this.client.callbackParams(responseUrl);
-			this.tokens = await this.client.callback(redirectUri, params, {
-				response_type: 'code',
-				code_verifier: verifier
-			}, {
-				exchangeBody: {
-					scope: scopes.join(' '),
-					client_info: 1 // Needed to get MSAL-specific info.
+			if (responseUrl.searchParams.has('error')) {
+				throw {
+					error: responseUrl.searchParams.get('error'),
+					error_description: responseUrl.searchParams.get('error_description')
 				}
-			});
+			}
+			
+			this.logger.info('Acquiring access token.');
+			const formData = new FormData();
+			formData.append('client_id', this.options.auth.clientId);
+			formData.append('grant_type', 'authorization_code');
+			formData.append('scope', scopes.join(' '));
+			formData.append('code', responseUrl.searchParams.get('code'));
+			formData.append('redirect_uri', this.options.auth.redirectUri);
+			formData.append('code_verifier', verifier);
+			formData.append('client_info', 1); // Needed to get MSAL-specific info.
 
-			await this.cacheTokens(this.tokens);
+			this.acquireTokens(formData);
 			return this.tokens;
 		});
 
 		this.ipc.on('msal-acquire-token-silent', async request => {
-			if (this.tokens.expired()) {
+			if (this.tokens.expires_at < new Date()) {
 				if (this.tokens.refresh_token) {
 					this.logger.info('Refreshing access tokens.');
-					this.tokens = await this.client.refresh(this.tokens, {
-						exchangeBody: {
-							scope: (request.scopes || []).join(' '),
-							client_info: 1 // Needed to get MSAL-specific info.
-						}
-					});
-					await this.cacheTokens(this.tokens);
+
+					const formData = new FormData();
+					formData.append('client_id', this.options.auth.clientId);
+					formData.append('grant_type', 'refresh_token');
+					formData.append('scope', (request.scopes || []).join(' '));
+					formData.append('refresh_token', this.tokens.refresh_token);
+					formData.append('client_info', 1); // Needed to get MSAL-specific info.
+
+					await this.acquireTokens(formData);
 				} else {
+					// TODO: Attempt a silent refresh with a hidden window.
 					throw {
 						error: 'interaction_required',
 						error_description: 'The request requires user interaction. For example, an additional authentication step is required.'
@@ -145,17 +156,45 @@ export class CapacitorMsal {
 		this.ipc.on('msal-get-account', () => this.tokens);
 	}
 
-	private async getCachedTokens(): Promise<TokenSet> {
-		this.logger.debug('Retrieving refresh token from cache.');
-		const refreshToken = await keytar.getPassword(this.keytarService, 'tokens');
-		return new TokenSet({
-			refresh_token: refreshToken,
-			expires_at: 0 // Force refresh
+	private async acquireTokens(formData: FormData) {
+		const response = await fetch(this.openId.token_endpoint, {
+			method: 'POST',
+			body: formData
 		});
+		const tokenResponse = await response.json<TokenResponse | ErrorResponse>();
+		if (isErrorResponse(tokenResponse)) {
+			throw tokenResponse;
+		}
+
+		// Calculate the expiration time so future checks will be accurate.
+		tokenResponse.expires_at = new Date(Date.now() + tokenResponse.expires_in * 1000);
+		
+		// TODO: Validate id_token
+		
+		this.tokens = tokenResponse;
+		await this.cacheTokens(this.tokens);
 	}
 
-	private cacheTokens(tokens: TokenSet): Promise<void> {
+	private async getCachedTokens(): Promise<TokenResponse> {
+		this.logger.debug('Retrieving refresh token from cache.');
+		const refreshToken = await keytar.getPassword(this.keytarService, 'tokens');
+		return {
+			access_token: '',
+			token_type: '',
+			expires_in: 0,
+			scope: '',
+			refresh_token: refreshToken,
+			expires_at: new Date() // Force refresh
+		};
+	}
+
+	private cacheTokens(tokens: TokenResponse): Promise<void> {
+		// TODO: Cache the entire collection, not just the refresh token.
 		this.logger.debug('Caching refresh token.');
 		return keytar.setPassword(this.keytarService, 'tokens', tokens.refresh_token);
 	}
+}
+
+function isErrorResponse(response: TokenResponse | ErrorResponse): response is ErrorResponse {
+	return 'error' in response;
 }

@@ -5,7 +5,7 @@ type IpcRendererEvent = import('electron').IpcRendererEvent;
 type WebContents = import('electron').WebContents;
 type Configuration = import('msal/lib-es6').Configuration;
 type AuthenticationParameters = import('msal/lib-es6').AuthenticationParameters;
-type TokenSet = import('openid-client').TokenSet;
+type TokenResponse = import('./msal').TokenResponse;
 
 declare module 'electron-promise-ipc' {
 	type Listener = Function;
@@ -32,9 +32,9 @@ declare module 'electron-promise-ipc' {
 		
 		// Custom overloads begin here.
 		on(route: 'msal-init', listener: (options: Configuration, event: IpcMainEvent) => Promise<void> | void): this;
-		on(route: 'msal-login-popup', listener: (request: AuthenticationParameters | undefined, event: IpcMainEvent) => Promise<TokenSet> | TokenSet): this;
-		on(route: 'msal-acquire-token-silent', listener: (request: AuthenticationParameters, event: IpcMainEvent) => Promise<TokenSet> | TokenSet): this;
-		on(route: 'msal-get-account', listener: (event: IpcMainEvent) => Promise<TokenSet> | TokenSet): this;
+		on(route: 'msal-login-popup', listener: (request: AuthenticationParameters | undefined, event: IpcMainEvent) => Promise<TokenResponse> | TokenResponse): this;
+		on(route: 'msal-acquire-token-silent', listener: (request: AuthenticationParameters, event: IpcMainEvent) => Promise<TokenResponse> | TokenResponse): this;
+		on(route: 'msal-get-account', listener: (event: IpcMainEvent) => Promise<TokenResponse> | TokenResponse): this;
 	}
 
 	export class PromiseIpcRenderer extends PromiseIpcBase {
@@ -43,9 +43,9 @@ declare module 'electron-promise-ipc' {
 		
 		// Custom overloads begin here.
 		send(route: 'msal-init', options: Configuration): Promise<void>;
-		send(route: 'msal-login-popup', request?: AuthenticationParameters): Promise<TokenSet>;
-		send(route: 'msal-acquire-token-silent', request: AuthenticationParameters): Promise<TokenSet>;
-		send(route: 'msal-get-account'): Promise<TokenSet>;
+		send(route: 'msal-login-popup', request?: AuthenticationParameters): Promise<TokenResponse>;
+		send(route: 'msal-acquire-token-silent', request: AuthenticationParameters): Promise<TokenResponse>;
+		send(route: 'msal-get-account'): Promise<TokenResponse>;
 	}
 
 	const promiseIpc: PromiseIpcMain | PromiseIpcRenderer;

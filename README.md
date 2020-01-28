@@ -89,6 +89,10 @@ The configuration file `capacitor.config.json` is required to use this plugin. T
 }
 ```
 
+#### Proxy Settings
+
+This plugin internally uses `electron-fetch` to access the token endpoint, and an Electron `BrowserWindow` is used to access the authorize endpoint. Both of these components use Chromium and its underlying network operations. As a result, this plugin will automatically use system-wide proxy settings without any additional configuration.
+
 ### Android
 
 Coming soon&trade;

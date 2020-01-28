@@ -3,7 +3,6 @@ import { registerElectronPlugin } from '@capacitor/electron/dist/esm';
 import { Configuration, AuthenticationParameters, AuthResponse, Account } from 'msal/lib-es6';
 import { ClientInfo } from 'msal/lib-es6/ClientInfo';
 import { IdToken } from 'msal/lib-es6/IdToken';
-import { TokenSet } from 'openid-client';
 import { PromiseIpcRenderer } from 'electron-promise-ipc';
 import { MsalPlugin } from '..';
 
@@ -53,7 +52,7 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		);
 	}
 
-	private tokensToResponse(tokens: TokenSet): AuthResponse {
+	private tokensToResponse(tokens: TokenResponse): AuthResponse {
 		const idToken = new IdToken(tokens.id_token);
 		return {
 			uniqueId: idToken.objectId || idToken.subject,
@@ -63,10 +62,10 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 			idTokenClaims: idToken.claims,
 			accessToken: tokens.access_token,
 			scopes: tokens.scope.split(' '),
-			expiresOn: new Date(tokens.expires_at * 1000),
+			expiresOn: tokens.expires_at,
 			account: Account.createAccount(
 				idToken,
-				new ClientInfo(tokens.client_info as string)
+				new ClientInfo(tokens.client_info)
 			),
 			accountState: tokens.session_state
 		};
