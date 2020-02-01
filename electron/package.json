@@ -1,7 +1,7 @@
 {
   "name": "capacitor-msal-electron",
   "private": true,
-  "version": "0.1.11",
+  "version": "0.2.0",
   "description": "A Capacitor plugin that provides OAuth 2.0 authentication using the Microsoft Authentication Library",
   "author": "911 Secure",
   "license": "MIT",

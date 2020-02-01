@@ -16,6 +16,8 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 		});
 	}
 
+	// TODO: Convert all errors to the strongly typed version.
+
 	public init(options: Configuration): Promise<void> {
 		// The following defaults come from the MSDN documentation.
 		// https://docs.microsoft.com/en-us/azure/active-directory/develop/msal-js-initializing-client-applications

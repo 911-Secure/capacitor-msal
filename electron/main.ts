@@ -51,84 +51,9 @@ export class CapacitorMsal {
 			this.tokens = await this.getCachedTokens();
 		});
 
-		this.ipc.on('msal-login-popup', async (request, event) => {
-			const scopes = request && request.scopes || [];
-			const extraScopes = request && request.extraScopesToConsent || [];
+		this.ipc.on('msal-login-popup', (request, event) => this.loginPopup(request, event));
 
-			const verifier = base64url(randomBytes(32));
-			const challenge = base64url(createHash('sha256').update(verifier).digest());
-
-			const authorizeUrl = new URL(this.openId.authorization_endpoint);
-			authorizeUrl.search = new URLSearchParams({
-				client_id: this.options.auth.clientId,
-				response_type: 'code',
-				redirect_uri: this.options.auth.redirectUri as string,
-				scope: scopes.concat(extraScopes).join(' '),
-				response_mode: 'query',
-				prompt: request && request.prompt,
-				login_hint: request && request.loginHint,
-				// TODO: domain_hint
-				code_challenge_method: 'S256',
-				code_challenge: challenge
-			}) as any;
-
-			// Login using a popup.
-			this.logger.info('Opening login popup window.');
-			const responseUrl = await new Promise<URL>((resolve, reject) => {
-				let receivedResponse = false;
-
-				const window = new BrowserWindow({
-					width: 1000,
-					height: 600,
-					show: false,
-					parent: BrowserWindow.fromWebContents(event.sender),
-					modal: true
-				});
-
-				if (request.prompt !== 'none') {
-					window.on('ready-to-show', () => window.show());
-				}
-
-				window.on('closed', () => {
-					if (!receivedResponse) {
-						reject({
-							error: 'user_cancelled',
-							error_description: 'User cancelled the flow.'
-						});
-					}
-				});
-
-				window.webContents.on('will-redirect', (_event, url) => {
-					receivedResponse = true;
-					window.close();
-					resolve(new URL(url));
-				});
-
-				window.loadURL(authorizeUrl.href);
-			});
-
-			if (responseUrl.searchParams.has('error')) {
-				throw {
-					error: responseUrl.searchParams.get('error'),
-					error_description: responseUrl.searchParams.get('error_description')
-				}
-			}
-			
-			this.logger.info('Acquiring access token.');
-			const formData = new FormData();
-			formData.append('client_id', this.options.auth.clientId);
-			formData.append('grant_type', 'authorization_code');
-			formData.append('scope', scopes.join(' '));
-			formData.append('code', responseUrl.searchParams.get('code'));
-			formData.append('redirect_uri', this.options.auth.redirectUri);
-			formData.append('code_verifier', verifier);
-			formData.append('client_info', 1); // Needed to get MSAL-specific info.
-
-			this.acquireTokens(formData);
-			return this.tokens;
-		});
-
-		this.ipc.on('msal-acquire-token-silent', async request => {
+		this.ipc.on('msal-acquire-token-silent', async (request, event) => {
 			if (this.tokens.expires_at < new Date()) {
 				if (this.tokens.refresh_token) {
 					this.logger.info('Refreshing access tokens.');
@@ -142,11 +67,8 @@ export class CapacitorMsal {
 
 					await this.acquireTokens(formData);
 				} else {
-					// TODO: Attempt a silent refresh with a hidden window.
-					throw {
-						error: 'interaction_required',
-						error_description: 'The request requires user interaction. For example, an additional authentication step is required.'
-					};
+					request.prompt = 'none';
+					await this.loginPopup(request, event);
 				}
 			}
 
@@ -154,6 +76,83 @@ export class CapacitorMsal {
 		});
 
 		this.ipc.on('msal-get-account', () => this.tokens);
+	}
+
+	private async loginPopup(request: AuthenticationParameters, event: IpcMainEvent) {
+		const scopes = request && request.scopes || [];
+		const extraScopes = request && request.extraScopesToConsent || [];
+
+		const verifier = base64url(randomBytes(32));
+		const challenge = base64url(createHash('sha256').update(verifier).digest());
+
+		const authorizeUrl = new URL(this.openId.authorization_endpoint);
+		authorizeUrl.search = new URLSearchParams({
+			client_id: this.options.auth.clientId,
+			response_type: 'code',
+			redirect_uri: this.options.auth.redirectUri as string,
+			scope: scopes.concat(extraScopes).join(' '),
+			response_mode: 'query',
+			prompt: request && request.prompt,
+			login_hint: request && request.loginHint,
+			// TODO: domain_hint
+			code_challenge_method: 'S256',
+			code_challenge: challenge
+		}) as any;
+
+		// Login using a popup.
+		this.logger.info('Opening login popup window.');
+		const responseUrl = await new Promise<URL>((resolve, reject) => {
+			let receivedResponse = false;
+
+			const window = new BrowserWindow({
+				width: 1000,
+				height: 600,
+				show: false,
+				parent: BrowserWindow.fromWebContents(event.sender),
+				modal: true
+			});
+
+			if (request.prompt !== 'none') {
+				window.on('ready-to-show', () => window.show());
+			}
+
+			window.on('closed', () => {
+				if (!receivedResponse) {
+					reject({
+						errorCode: 'user_cancelled',
+						errorMessage: 'User cancelled the flow.'
+					});
+				}
+			});
+
+			window.webContents.on('will-redirect', (_event, url) => {
+				receivedResponse = true;
+				window.close();
+				resolve(new URL(url));
+			});
+
+			window.loadURL(authorizeUrl.href);
+		});
+
+		if (responseUrl.searchParams.has('error')) {
+			throw {
+				errorCode: responseUrl.searchParams.get('error'),
+				errorMessage: responseUrl.searchParams.get('error_description')
+			};
+		}
+		
+		this.logger.info('Acquiring access token.');
+		const formData = new FormData();
+		formData.append('client_id', this.options.auth.clientId);
+		formData.append('grant_type', 'authorization_code');
+		formData.append('scope', scopes.join(' '));
+		formData.append('code', responseUrl.searchParams.get('code'));
+		formData.append('redirect_uri', this.options.auth.redirectUri);
+		formData.append('code_verifier', verifier);
+		formData.append('client_info', 1); // Needed to get MSAL-specific info.
+
+		this.acquireTokens(formData);
+		return this.tokens;
 	}
 
 	private async acquireTokens(formData: FormData) {
@@ -179,13 +178,9 @@ export class CapacitorMsal {
 		this.logger.debug('Retrieving refresh token from cache.');
 		const refreshToken = await keytar.getPassword(this.keytarService, 'tokens');
 		return {
-			access_token: '',
-			token_type: '',
-			expires_in: 0,
-			scope: '',
 			refresh_token: refreshToken,
 			expires_at: new Date() // Force refresh
-		};
+		} as TokenResponse;
 	}
 
 	private cacheTokens(tokens: TokenResponse): Promise<void> {
