@@ -69,7 +69,8 @@ export class MsalElectron extends WebPlugin implements MsalPlugin {
 				idToken,
 				new ClientInfo(tokens.client_info)
 			),
-			accountState: tokens.session_state
+			accountState: tokens.session_state,
+			fromCache: false
 		};
 	}
 }

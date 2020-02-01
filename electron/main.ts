@@ -102,6 +102,7 @@ export class CapacitorMsal {
 		if (request && request.loginHint) {
 			authorizeUrl.searchParams.append('login_hint', request.loginHint);
 		}
+		// TODO: Handle domain_hint
 
 		// Login using a popup.
 		this.logger.debug('Opening login popup window.');
