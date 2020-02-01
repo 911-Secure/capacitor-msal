@@ -88,18 +88,20 @@ export class CapacitorMsal {
 		const challenge = base64url(createHash('sha256').update(verifier).digest());
 
 		const authorizeUrl = new URL(this.openId.authorization_endpoint);
-		authorizeUrl.search = new URLSearchParams({
-			client_id: this.options.auth.clientId,
-			response_type: 'code',
-			redirect_uri: this.options.auth.redirectUri as string,
-			scope: scopes.concat(extraScopes).join(' '),
-			response_mode: 'query',
-			prompt: request && request.prompt,
-			login_hint: request && request.loginHint,
-			// TODO: domain_hint
-			code_challenge_method: 'S256',
-			code_challenge: challenge
-		}) as any;
+		authorizeUrl.searchParams.append('client_id', this.options.auth.clientId);
+		authorizeUrl.searchParams.append('response_type', 'code');
+		authorizeUrl.searchParams.append('redirect_uri', this.options.auth.redirectUri as string),
+		authorizeUrl.searchParams.append('scope', scopes.concat(extraScopes).join(' '));
+		authorizeUrl.searchParams.append('response_mode', 'query');
+		authorizeUrl.searchParams.append('code_challenge_method', 'S256');
+		authorizeUrl.searchParams.append('code_challenge', challenge);
+
+		if (request && request.prompt) {
+			authorizeUrl.searchParams.append('prompt', request.prompt);
+		}
+		if (request && request.loginHint) {
+			authorizeUrl.searchParams.append('login_hint', request.loginHint);
+		}
 
 		// Login using a popup.
 		this.logger.debug('Opening login popup window.');
