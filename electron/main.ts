@@ -155,11 +155,10 @@ export class CapacitorMsal {
 		formData.append('code_verifier', verifier);
 		formData.append('client_info', 1); // Needed to get MSAL-specific info.
 
-		this.acquireTokens(formData);
-		return this.tokens;
+		return await this.acquireTokens(formData);
 	}
 
-	private async acquireTokens(formData: FormData) {
+	private async acquireTokens(formData: FormData): Promise<TokenResponse> {
 		const response = await fetch(this.openId.token_endpoint, {
 			method: 'POST',
 			body: formData
@@ -174,8 +173,8 @@ export class CapacitorMsal {
 
 		// TODO: Validate id_token
 
-		this.tokens = tokenResponse;
 		await this.cacheTokens(this.tokens);
+		return tokenResponse;
 	}
 
 	private async getCachedTokens(): Promise<TokenResponse> {
@@ -188,6 +187,7 @@ export class CapacitorMsal {
 	}
 
 	private cacheTokens(tokens: TokenResponse): Promise<void> {
+		this.tokens = tokens;
 		// TODO: Cache the entire collection, not just the refresh token.
 		this.logger.debug('Caching refresh token.');
 		return keytar.setPassword(this.keytarService, 'tokens', tokens.refresh_token);
