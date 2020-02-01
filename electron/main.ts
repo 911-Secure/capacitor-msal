@@ -48,6 +48,7 @@ export class CapacitorMsal {
 			const response = await fetch(`${options.auth.authority}/.well-known/openid-configuration`);
 			this.openId = await response.json();
 
+			this.options = options;
 			this.tokens = await this.getCachedTokens();
 		});
 
