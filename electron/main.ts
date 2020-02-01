@@ -173,7 +173,7 @@ export class CapacitorMsal {
 
 		// TODO: Validate id_token
 
-		await this.cacheTokens(this.tokens);
+		await this.cacheTokens(tokenResponse);
 		return tokenResponse;
 	}
 
