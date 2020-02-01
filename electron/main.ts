@@ -68,6 +68,7 @@ export class CapacitorMsal {
 
 					await this.acquireTokens(formData);
 				} else {
+					this.logger.debug('No refresh token, trying a silent popup');
 					request.prompt = 'none';
 					await this.loginPopup(request, event);
 				}
@@ -101,7 +102,7 @@ export class CapacitorMsal {
 		}) as any;
 
 		// Login using a popup.
-		this.logger.info('Opening login popup window.');
+		this.logger.debug('Opening login popup window.');
 		const responseUrl = await new Promise<URL>((resolve, reject) => {
 			let receivedResponse = false;
 
@@ -141,7 +142,7 @@ export class CapacitorMsal {
 				errorMessage: responseUrl.searchParams.get('error_description')
 			};
 		}
-		
+
 		this.logger.info('Acquiring access token.');
 		const formData = new FormData();
 		formData.append('client_id', this.options.auth.clientId);
@@ -168,9 +169,9 @@ export class CapacitorMsal {
 
 		// Calculate the expiration time so future checks will be accurate.
 		tokenResponse.expires_at = new Date(Date.now() + tokenResponse.expires_in * 1000);
-		
+
 		// TODO: Validate id_token
-		
+
 		this.tokens = tokenResponse;
 		await this.cacheTokens(this.tokens);
 	}
